@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercices de Respiration : Cohérence Cardiaque & Respiration Carrée</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #e0f2fe; /* Bleu ciel très pâle (sky-100) */
+            color: #374151; /* text-gray-700 */
+        }
+        .app-container {
+            background-color: white;
+            border-left: 5px solid #60a5fa; /* blue-400 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .app-title {
+            color: #1e3a8a; /* blue-800 */
+        }
+        .btn-control {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .btn-control:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        .btn-control-alt {
+            background-color: #93c5fd; /* blue-300 */
+            color: #1e3a8a; /* blue-800 */
+        }
+        .btn-control-alt:hover {
+            background-color: #60a5fa; /* blue-400 */
+        }
+        .btn-stop {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+        }
+        .btn-stop:hover {
+            background-color: #dc2626; /* red-600 */
+        }
+
+        #breathingCircleCanvas {
+            display: block;
+            margin: 1rem auto;
+            background-color: #f0f9ff; /* sky-50 */
+            border-radius: 50%;
+        }
+        #squareBreathingCanvasContainer {
+            position: relative; 
+            width: 180px;
+            height: 180px;
+            margin: 1rem auto;
+            background-color: #f0f9ff; 
+            border-radius: 0.5rem; 
+        }
+        #squareBreathingCanvas {
+            display: block;
+        }
+        #squareBreathingText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            color: #a5b4fc; 
+            pointer-events: none; 
+        }
+        
+        .instruction-text {
+            color: #2563eb; 
+            min-height: 2rem; 
+        }
+        .timer-text {
+            color: #1e3a8a; 
+        }
+        .cycle-counter-text {
+            color: #1d4ed8; /* blue-700 */
+            font-size: 0.875rem; /* text-sm */
+        }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+
+    <header class="mb-10 text-center">
+        <h1 class="text-3xl sm:text-4xl font-bold app-title">Vos Outils de Respiration</h1>
+        <p class="text-lg text-gray-600 mt-2">Retrouvez calme et équilibre avec ces exercices guidés.</p>
+    </header>
+
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div id="coherenceAppContainer" class="app-container p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-center mb-6 app-title">Cohérence Cardiaque (5 min)</h2>
+            <div class="text-center mb-4">
+                <canvas id="breathingCircleCanvas" width="200" height="200"></canvas>
+            </div>
+            <div id="coherenceInstruction" class="text-center text-xl font-semibold mb-2 instruction-text">Prêt ?</div>
+            <div id="coherenceTimer" class="text-center text-4xl font-bold mb-6 timer-text">05:00</div>
+            <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                <button id="startStopCoherence" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button>
+                <button id="muteSoundCoherence" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button>
+            </div>
+        </div>
+
+        <div id="squareAppContainer" class="app-container p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-center mb-6 app-title">Respiration Carrée (10 Cycles)</h2>
+            <div id="squareBreathingCanvasContainer">
+                <canvas id="squareBreathingCanvas" width="180" height="180"></canvas>
+                <div id="squareBreathingText">Prêt ?</div>
+            </div>
+            <div id="squareInstruction" class="text-center text-xl font-semibold mb-1 instruction-text h-8">Prêt ? (4s par phase)</div>
+            <div id="squareCycleCounter" class="text-center text-sm mb-1 cycle-counter-text">Cycle : 0 / 10</div>
+            <div id="squarePhaseTimer" class="text-center text-4xl font-bold mb-6 timer-text">00:04</div>
+            <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                <button id="startStopSquare" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button>
+                <button id="muteSoundSquare" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Logique Commune ---
+        let audioContextInitialized = false;
+        async function initializeAudioContext() {
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running' && !audioContextInitialized) {
+                try {
+                    await Tone.start();
+                    console.log("AudioContext démarré par l'utilisateur.");
+                    audioContextInitialized = true;
+                } catch (e) {
+                    console.error("Erreur au démarrage de Tone.context:", e);
+                    audioContextInitialized = false; 
+                }
+            } else if (typeof Tone === 'undefined' && !audioContextInitialized) {
+                console.warn("Tone.js n'est pas chargé, les sons ne fonctionneront pas.");
+                audioContextInitialized = true; 
+            } else {
+                audioContextInitialized = true; 
+            }
+            return audioContextInitialized;
+        }
+
+        // --- Application de Cohérence Cardiaque ---
+        const coherenceCanvas = document.getElementById('breathingCircleCanvas');
+        const coherenceInstructionText = document.getElementById('coherenceInstruction');
+        const coherenceTimerText = document.getElementById('coherenceTimer');
+        const coherenceStartStopBtn = document.getElementById('startStopCoherence');
+        const coherenceMuteBtn = document.getElementById('muteSoundCoherence');
+
+        if (coherenceCanvas) {
+            const ctxC = coherenceCanvas.getContext('2d');
+            const baseRadiusC = coherenceCanvas.height / 2 * 0.6; 
+            const maxRadiusC = coherenceCanvas.height / 2 * 0.85; 
+            const minRadiusC = coherenceCanvas.height / 2 * 0.35; 
+            let currentRadiusC = minRadiusC;
+            let inhalingC = true;
+            let animationIdC;
+            const totalTimeC = 300; 
+            let remainingTimeC = totalTimeC;
+            let timerIntervalC;
+            let soundEnabledC = true;
+            let isCoherenceRunning = false;
+
+            let inhaleSynthC, exhaleSynthC;
+
+            function setupCoherenceSounds() {
+                if (typeof Tone !== 'undefined') {
+                    inhaleSynthC = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.5 }, volume: -28 }).toDestination();
+                    exhaleSynthC = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.5 }, volume: -28 }).toDestination();
+                }
+            }
+            setupCoherenceSounds();
+
+            function drawCoherenceCircle() {
+                ctxC.clearRect(0, 0, coherenceCanvas.width, coherenceCanvas.height);
+                ctxC.beginPath();
+                ctxC.arc(coherenceCanvas.width / 2, coherenceCanvas.height / 2, currentRadiusC, 0, 2 * Math.PI);
+                ctxC.fillStyle = inhalingC ? '#93c5fd' : '#bfdbfe'; 
+                ctxC.fill();
+            }
+
+            function updateCoherenceTimerDisplay() {
+                const minutes = Math.floor(remainingTimeC / 60);
+                const seconds = remainingTimeC % 60;
+                coherenceTimerText.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            let phaseStartTimeC = 0;
+            const phaseDurationC = 5000; 
+
+            function animateCoherence(timestamp) {
+                if (!isCoherenceRunning) return;
+                if (!phaseStartTimeC) phaseStartTimeC = timestamp;
+                const elapsedTimeInPhase = timestamp - phaseStartTimeC;
+
+                if (inhalingC) {
+                    currentRadiusC = minRadiusC + (maxRadiusC - minRadiusC) * (elapsedTimeInPhase / phaseDurationC);
+                    if (elapsedTimeInPhase >= phaseDurationC) {
+                        currentRadiusC = maxRadiusC;
+                        inhalingC = false;
+                        phaseStartTimeC = timestamp;
+                        coherenceInstructionText.textContent = "Expirez...";
+                        if (soundEnabledC && exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerAttackRelease("D4", "4.8s", Tone.now());
+                    }
+                } else {
+                    currentRadiusC = maxRadiusC - (maxRadiusC - minRadiusC) * (elapsedTimeInPhase / phaseDurationC);
+                    if (elapsedTimeInPhase >= phaseDurationC) {
+                        currentRadiusC = minRadiusC;
+                        inhalingC = true;
+                        phaseStartTimeC = timestamp;
+                        coherenceInstructionText.textContent = "Inspirez...";
+                        if (soundEnabledC && inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now());
+                    }
+                }
+                currentRadiusC = Math.max(minRadiusC, Math.min(maxRadiusC, currentRadiusC));
+                drawCoherenceCircle();
+                animationIdC = requestAnimationFrame(animateCoherence);
+            }
+
+            async function startCoherenceExercise() {
+                if (isCoherenceRunning) return;
+                const audioReady = await initializeAudioContext();
+                if (!audioReady && typeof Tone !== 'undefined' && soundEnabledC) { 
+                     alert("Impossible de démarrer l'audio. L'exercice continuera sans son.");
+                }
+
+                isCoherenceRunning = true;
+                coherenceStartStopBtn.textContent = "Arrêter";
+                coherenceStartStopBtn.classList.remove('btn-control');
+                coherenceStartStopBtn.classList.add('btn-stop');
+                remainingTimeC = totalTimeC;
+                updateCoherenceTimerDisplay();
+                inhalingC = true;
+                currentRadiusC = minRadiusC;
+                coherenceInstructionText.textContent = "Inspirez...";
+                phaseStartTimeC = performance.now();
+                if (soundEnabledC && inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now());
+
+                if(timerIntervalC) clearInterval(timerIntervalC);
+                timerIntervalC = setInterval(() => {
+                    if (!isCoherenceRunning) { clearInterval(timerIntervalC); return; }
+                    remainingTimeC--;
+                    updateCoherenceTimerDisplay();
+                    if (remainingTimeC <= 0) {
+                        stopCoherenceExercise();
+                        coherenceInstructionText.textContent = "Terminé !";
+                    }
+                }, 1000);
+                if(animationIdC) cancelAnimationFrame(animationIdC);
+                animationIdC = requestAnimationFrame(animateCoherence);
+            }
+
+            function stopCoherenceExercise() {
+                if (!isCoherenceRunning) return;
+                isCoherenceRunning = false;
+                coherenceStartStopBtn.textContent = "Démarrer";
+                coherenceStartStopBtn.classList.add('btn-control');
+                coherenceStartStopBtn.classList.remove('btn-stop');
+                cancelAnimationFrame(animationIdC);
+                clearInterval(timerIntervalC);
+                coherenceInstructionText.textContent = "Prêt ?";
+                currentRadiusC = minRadiusC;
+                drawCoherenceCircle();
+                if (inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerRelease(Tone.now() + 0.1);
+                if (exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerRelease(Tone.now() + 0.1);
+            }
+
+            coherenceStartStopBtn.addEventListener('click', () => {
+                if (!isCoherenceRunning) startCoherenceExercise();
+                else stopCoherenceExercise();
+            });
+
+            coherenceMuteBtn.addEventListener('click', () => {
+                soundEnabledC = !soundEnabledC;
+                coherenceMuteBtn.textContent = soundEnabledC ? "Son On" : "Son Off";
+                if (typeof Tone !== 'undefined' && audioContextInitialized) Tone.Destination.mute = !soundEnabledC;
+            });
+            drawCoherenceCircle();
+            updateCoherenceTimerDisplay();
+        }
+
+        // --- Application de Respiration Carrée ---
+        const squareCanvasEl = document.getElementById('squareBreathingCanvas');
+        const squareInstructionEl = document.getElementById('squareInstruction');
+        const squarePhaseTimerEl = document.getElementById('squarePhaseTimer');
+        const squareStartStopBtnEl = document.getElementById('startStopSquare');
+        const squareMuteBtnEl = document.getElementById('muteSoundSquare');
+        const squareBreathingTextEl = document.getElementById('squareBreathingText');
+        const squareCycleCounterEl = document.getElementById('squareCycleCounter');
+
+        if (squareCanvasEl) {
+            const ctxS = squareCanvasEl.getContext('2d');
+            const canvasSize = 180;
+            const padding = 20;
+            const squareSide = canvasSize - 2 * padding;
+            const squareX = padding;
+            const squareY = padding;
+            const ballRadius = 8;
+            
+            let currentPhaseSq = 0; 
+            const phaseDurationSq = 4; 
+            let timeInPhaseSq = phaseDurationSq;
+            let timerIntervalSq;
+            let soundEnabledSq = true;
+            let isSquareRunning = false;
+            let animationIdSq;
+            let ballPos = { x: squareX, y: squareY };
+
+            const totalCyclesSq = 10;
+            let currentCycleSq = 0;
+
+            const phaseTextsSq = ["Inspirez", "Rétention", "Expirez", "Rétention"];
+            // Couleurs du carré (si on veut le colorer, sinon il sera juste un contour)
+            // const phaseColorsSq = ['#60a5fa', '#a5b4fc', '#3b82f6', '#c7d2fe']; 
+
+            let inhaleSynthSq, exhaleSynthSq;
+
+            function setupSquareSounds() {
+                if (typeof Tone !== 'undefined') {
+                    // Sons encore plus doux
+                    inhaleSynthSq = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 0.8 }, volume: -32 }).toDestination();
+                    exhaleSynthSq = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 0.8 }, volume: -32 }).toDestination();
+                }
+            }
+            setupSquareSounds();
+
+            function drawSquareAndBall() {
+                ctxS.clearRect(0, 0, canvasSize, canvasSize);
+                
+                ctxS.strokeStyle = '#93c5fd'; // Bleu clair pour le carré 
+                ctxS.lineWidth = 3;
+                ctxS.strokeRect(squareX, squareY, squareSide, squareSide);
+
+                ctxS.beginPath();
+                ctxS.arc(ballPos.x, ballPos.y, ballRadius, 0, 2 * Math.PI);
+                ctxS.fillStyle = '#ef4444'; // Touche de rouge pour la boule 
+                ctxS.fill();
+            }
+
+            function updateSquarePhaseTimerDisplay() {
+                squarePhaseTimerEl.textContent = `00:0${Math.max(0, Math.ceil(timeInPhaseSq))}`;
+            }
+            function updateSquareCycleCounterDisplay() {
+                squareCycleCounterEl.textContent = `Cycle : ${currentCycleSq} / ${totalCyclesSq}`;
+            }
+            
+            let lastTimestampSq = 0;
+            let progressInPhase = 0; 
+
+            function animateSquare(timestamp) {
+                if (!isSquareRunning) return;
+                if (!lastTimestampSq) lastTimestampSq = timestamp;
+
+                const deltaTime = (timestamp - lastTimestampSq) / 1000; 
+                lastTimestampSq = timestamp;
+                
+                timeInPhaseSq -= deltaTime;
+                progressInPhase += deltaTime / phaseDurationSq;
+
+                if (timeInPhaseSq <= 0) {
+                    currentPhaseSq = (currentPhaseSq + 1) % 4;
+                    if (currentPhaseSq === 0) { // Nouveau cycle
+                        currentCycleSq++;
+                        updateSquareCycleCounterDisplay();
+                        if (currentCycleSq > totalCyclesSq) {
+                            stopSquareExercise();
+                            squareBreathingTextEl.textContent = "Terminé !";
+                            squareInstructionEl.textContent = "10 cycles complétés.";
+                            return;
+                        }
+                    }
+                    timeInPhaseSq = phaseDurationSq;
+                    progressInPhase = 0; 
+                    squareBreathingTextEl.textContent = phaseTextsSq[currentPhaseSq];
+                    squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${phaseDurationSq}s)`;
+
+                    if (soundEnabledSq && audioContextInitialized) {
+                        if (currentPhaseSq === 0 && inhaleSynthSq) { 
+                            inhaleSynthSq.triggerAttackRelease("C4", `${phaseDurationSq - 0.3}s`, Tone.now());
+                        } else if (currentPhaseSq === 2 && exhaleSynthSq) { 
+                            exhaleSynthSq.triggerAttackRelease("G3", `${phaseDurationSq - 0.3}s`, Tone.now());
+                        }
+                    }
+                }
+                updateSquarePhaseTimerDisplay();
+
+                switch (currentPhaseSq) {
+                    case 0: 
+                        ballPos.x = squareX + squareSide * progressInPhase;
+                        ballPos.y = squareY;
+                        break;
+                    case 1: 
+                        ballPos.x = squareX + squareSide;
+                        ballPos.y = squareY + squareSide * progressInPhase;
+                        break;
+                    case 2: 
+                        ballPos.x = squareX + squareSide * (1 - progressInPhase);
+                        ballPos.y = squareY + squareSide;
+                        break;
+                    case 3: 
+                        ballPos.x = squareX;
+                        ballPos.y = squareY + squareSide * (1 - progressInPhase);
+                        break;
+                }
+                ballPos.x = Math.max(squareX, Math.min(squareX + squareSide, ballPos.x));
+                ballPos.y = Math.max(squareY, Math.min(squareY + squareSide, ballPos.y));
+
+                drawSquareAndBall();
+                animationIdSq = requestAnimationFrame(animateSquare);
+            }
+
+            async function startSquareExercise() {
+                if (isSquareRunning) return;
+                const audioReady = await initializeAudioContext();
+                 if (!audioReady && typeof Tone !== 'undefined' && soundEnabledSq) {
+                     alert("Impossible de démarrer l'audio. L'exercice continuera sans son.");
+                 }
+
+                isSquareRunning = true;
+                squareStartStopBtnEl.textContent = "Arrêter";
+                squareStartStopBtnEl.classList.remove('btn-control');
+                squareStartStopBtnEl.classList.add('btn-stop');
+                
+                currentCycleSq = 1; // Démarrer au cycle 1
+                updateSquareCycleCounterDisplay();
+                currentPhaseSq = 0; 
+                timeInPhaseSq = phaseDurationSq;
+                progressInPhase = 0;
+                ballPos = { x: squareX, y: squareY };
+                squareBreathingTextEl.textContent = phaseTextsSq[currentPhaseSq];
+                squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${phaseDurationSq}s)`;
+                updateSquarePhaseTimerDisplay();
+                
+                if (soundEnabledSq && inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerAttackRelease("C4", `${phaseDurationSq - 0.3}s`, Tone.now());
+
+                lastTimestampSq = performance.now();
+                if(animationIdSq) cancelAnimationFrame(animationIdSq);
+                animationIdSq = requestAnimationFrame(animateSquare);
+            }
+
+            function stopSquareExercise() {
+                if (!isSquareRunning) return;
+                isSquareRunning = false;
+                squareStartStopBtnEl.textContent = "Démarrer";
+                squareStartStopBtnEl.classList.add('btn-control');
+                squareStartStopBtnEl.classList.remove('btn-stop');
+                cancelAnimationFrame(animationIdSq);
+                // clearInterval(timerIntervalSq); // Plus utilisé avec requestAnimationFrame pour le timer principal
+                squareInstructionEl.textContent = "Prêt ? (4s par phase)";
+                squareBreathingTextEl.textContent = "Prêt ?";
+                timeInPhaseSq = phaseDurationSq;
+                currentPhaseSq = 0;
+                currentCycleSq = 0; // Réinitialiser le compteur de cycle
+                updateSquareCycleCounterDisplay();
+                ballPos = { x: squareX, y: squareY }; 
+                updateSquarePhaseTimerDisplay();
+                drawSquareAndBall(); 
+                if (inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerRelease(Tone.now() + 0.1);
+                if (exhaleSynthSq && audioContextInitialized) exhaleSynthSq.triggerRelease(Tone.now() + 0.1);
+            }
+
+            squareStartStopBtnEl.addEventListener('click', () => {
+                if (!isSquareRunning) startSquareExercise();
+                else stopSquareExercise();
+            });
+
+            squareMuteBtnEl.addEventListener('click', () => {
+                soundEnabledSq = !soundEnabledSq;
+                squareMuteBtnEl.textContent = soundEnabledSq ? "Son On" : "Son Off";
+                if (typeof Tone !== 'undefined' && audioContextInitialized) {
+                     // Pour un contrôle global du son si vous le souhaitez
+                    // Tone.Destination.mute = !soundEnabledSq; 
+                    // Sinon, les sons individuels seront simplement non joués si soundEnabledSq est false
+                }
+            });
+
+            drawSquareAndBall();
+            updateSquarePhaseTimerDisplay();
+            updateSquareCycleCounterDisplay(); // Affichage initial du compteur de cycle
+        }
+
+    </script>
+</body>
+</html>
