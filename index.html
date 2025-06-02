@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercices de Respiration Guidés - Naval Group Toulon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #e0f2fe; /* Bleu ciel très pâle (sky-100) */
+            color: #374151; /* text-gray-700 */
+        }
+        .app-container {
+            background-color: white;
+            border-left: 5px solid #60a5fa; /* blue-400 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .app-title {
+            color: #1e3a8a; /* blue-800 */
+        }
+        .btn-control {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .btn-control:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        .btn-control-alt {
+            background-color: #93c5fd; /* blue-300 */
+            color: #1e3a8a; /* blue-800 */
+        }
+        .btn-control-alt:hover {
+            background-color: #60a5fa; /* blue-400 */
+        }
+        .btn-stop {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+        }
+        .btn-stop:hover {
+            background-color: #dc2626; /* red-600 */
+        }
+
+        /* Coherence Canvas */
+        #breathingCircleCanvas {
+            display: block;
+            margin: 1rem auto;
+            background-color: #f0f9ff; /* sky-50 */
+            border-radius: 50%; /* Make it a circle */
+        }
+        
+        /* Square Breathing Canvas */
+        #squareBreathingCanvasContainer {
+            position: relative; 
+            width: 180px;
+            height: 180px;
+            margin: 1rem auto;
+            background-color: #f0f9ff; 
+            border-radius: 0.5rem; 
+        }
+        #squareBreathingCanvas {
+            display: block;
+        }
+        #squareBreathingText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            color: #a5b4fc; 
+            pointer-events: none; 
+        }
+        
+        .instruction-text {
+            color: #2563eb; 
+            min-height: 2rem; 
+        }
+        .timer-text {
+            color: #1e3a8a; 
+        }
+        .cycle-counter-text {
+            color: #1d4ed8; /* blue-700 */
+            font-size: 0.875rem; /* text-sm */
+        }
+        .info-section {
+            background-color: #eff6ff; /* blue-50 */
+            border: 1px solid #bfdbfe; /* blue-200 */
+            color: #1e40af; /* blue-700 */
+        }
+
+        /* Navigation Tabs */
+        .tab-button {
+            background-color: #60a5fa; /* blue-400 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+        .tab-button:hover {
+            background-color: #3b82f6; /* blue-500 */
+        }
+        .tab-button.active {
+            background-color: white;
+            color: #1e3a8a; /* blue-800 */
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            border-top: 3px solid #1e3a8a;
+            border-left: 1px solid #bfdbfe;
+            border-right: 1px solid #bfdbfe;
+        }
+        .tab-content {
+            display: none; /* Hidden by default */
+        }
+        .tab-content.active {
+            display: block; /* Shown when active */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 sm:p-6">
+
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl sm:text-4xl font-bold app-title">Vos Outils de Respiration</h1>
+        <p class="text-lg text-gray-600 mt-2">Retrouvez calme et équilibre avec ces exercices guidés.</p>
+    </header>
+
+    <div class="w-full max-w-4xl mb-8">
+        <div class="flex justify-center mb-4">
+            <button class="tab-button active" onclick="showTab('accueil')">Accueil</button>
+            <button class="tab-button" onclick="showTab('coherence')">Cohérence Cardiaque</button>
+            <button class="tab-button" onclick="showTab('carre')">Respiration Carrée</button>
+        </div>
+
+        <div id="accueil" class="tab-content active app-container p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-3 text-center text-blue-700">Bienvenue sur votre espace de pratique respiratoire !</h2>
+            <p class="text-base leading-relaxed mb-2">
+                Cette page vous est proposée par le <strong class="font-semibold">Service de Prévention et Santé au Travail de Naval Group Toulon</strong>. Elle fait suite à l'information sur la gestion du stress par la respiration et la cohérence cardiaque, et vise à vous offrir des outils pratiques pour intégrer ces techniques dans votre quotidien.
+            </p>
+            <p class="text-base leading-relaxed mb-2">
+                Vous trouverez ici deux outils simples et efficaces pour vous aider à cultiver le calme et la sérénité au quotidien :
+            </p>
+            <ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4 mb-3">
+                <li><strong>La Cohérence Cardiaque :</strong> Une pratique de 5 minutes pour réguler votre rythme cardiaque, apaiser votre système nerveux et réduire instantanément le stress.</li>
+                <li><strong>La Respiration Carrée :</strong> Un exercice en 4 temps (inspirer, retenir, expirer, retenir) pour améliorer votre concentration, votre gestion émotionnelle et votre équilibre intérieur.</li>
+            </ul>
+            <p class="text-base leading-relaxed">
+                Prenez quelques instants pour vous, choisissez un exercice et laissez-vous guider en utilisant les onglets ci-dessus.
+            </p>
+        </div>
+
+        <div id="coherence" class="tab-content app-container p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-center mb-6 app-title">Cohérence Cardiaque</h2>
+            <p class="text-lg text-gray-600 mt-2 text-center">Harmonisez votre rythme cardiaque pour un esprit apaisé.</p>
+            
+            <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                <div id="coherenceAppContainer" class="app-container p-6 rounded-xl">
+                    <h3 class="text-xl font-bold text-center mb-6 app-title">Votre Exercice (5 min)</h3>
+                    <div class="text-center mb-4">
+                        <canvas id="breathingCircleCanvas" width="200" height="200"></canvas>
+                    </div>
+                    <div id="coherenceInstruction" class="text-center text-xl font-semibold mb-2 instruction-text">Prêt ?</div>
+                    <div id="coherenceTimer" class="text-center text-4xl font-bold mb-6 timer-text">05:00</div>
+                    <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                        <button id="startStopCoherence" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button>
+                        <button id="muteSoundCoherence" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button>
+                    </div>
+                </div>
+
+                <div class="info-section p-6 rounded-lg shadow-md flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Qu'est-ce que la Cohérence Cardiaque ?</h3>
+                        <p class="text-base leading-relaxed mb-4">
+                            La Cohérence Cardiaque est un état d'équilibre physiologique où le cœur, le cerveau et la respiration fonctionnent en harmonie. Elle est obtenue en pratiquant une respiration rythmée à 6 cycles par minute (5 secondes à l'inspiration, 5 secondes à l'expiration). Cet état optimise les fonctions corporelles et mentales, réduisant le stress et favorisant le bien-être.
+                        </p>
+
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Les Bienfaits</h3>
+                        <ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4 mb-4">
+                            <li>Réduction significative du stress et de l'anxiété.</li>
+                            <li>Amélioration de la gestion émotionnelle.</li>
+                            <li>Augmentation de la clarté mentale et de la concentration.</li>
+                            <li>Meilleure régulation de la tension artérielle.</li>
+                            <li>Renforcement du système immunitaire.</li>
+                            <li>Amélioration de la qualité du sommeil.</li>
+                        </ul>
+
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Comment pratiquer ?</h3>
+                        <p class="text-base leading-relaxed mb-4">
+                            L'exercice est simple : inspirez pendant 5 secondes, puis expirez pendant 5 secondes. Répétez ce cycle sans pause. L'application ci-contre vous guide visuellement et auditivement pour maintenir ce rythme idéal.
+                        </p>
+
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Faire de la Cohérence Cardiaque une routine</h3>
+                        <p class="text-base leading-relaxed">
+                            Pour des effets durables, il est recommandé de pratiquer la Cohérence Cardiaque 3 fois par jour, pendant 5 minutes, idéalement le matin au lever, avant le déjeuner, et en fin de journée. Une pratique régulière ancre l'état de calme en vous.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="carre" class="tab-content app-container p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-center mb-6 app-title">Respiration Carrée</h2>
+            <p class="text-lg text-gray-600 mt-2 text-center">Un exercice structuré pour la concentration et le calme.</p>
+
+            <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                <div id="squareAppContainer" class="app-container p-6 rounded-xl">
+                    <h3 class="text-xl font-bold text-center mb-6 app-title">Votre Exercice (10 Cycles)</h3>
+                    <div id="squareBreathingCanvasContainer">
+                        <canvas id="squareBreathingCanvas" width="180" height="180"></canvas>
+                        <div id="squareBreathingText">Prêt ?</div>
+                    </div>
+                    <div id="squareInstruction" class="text-center text-xl font-semibold mb-1 instruction-text h-8">Prêt ? (4s par phase)</div>
+                    <div id="squareCycleCounter" class="text-center text-sm mb-1 cycle-counter-text">Cycle : 0 / 10</div>
+                    <div id="squarePhaseTimer" class="text-center text-4xl font-bold mb-6 timer-text">00:04</div>
+                    <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                        <button id="startStopSquare" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button>
+                        <button id="muteSoundSquare" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button>
+                    </div>
+                </div>
+
+                <div class="info-section p-6 rounded-lg shadow-md flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Qu'est-ce que la Respiration Carrée ?</h3>
+                        <p class="text-base leading-relaxed mb-4">
+                            La Respiration Carrée (ou "Box Breathing") est une technique de respiration simple et puissante, souvent utilisée pour calmer le système nerveux, améliorer la concentration et réduire le stress. Elle consiste à diviser la respiration en quatre phases de durée égale : inspiration, rétention poumons pleins, expiration, et rétention poumons vides.
+                        </p>
+
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Les Bienfaits</h3>
+                        <ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4 mb-4">
+                            <li>Réduit l'anxiété et le stress rapidement.</li>
+                            <li>Améliore la concentration et la clarté mentale.</li>
+                            <li>Aide à réguler les émotions fortes.</li>
+                            <li>Favorise un sentiment de calme et de contrôle.</li>
+                            <li>Utile pour se préparer à des situations stressantes ou pour retrouver son calme après.</li>
+                        </ul>
+
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Comment pratiquer ?</h3>
+                        <p class="text-base leading-relaxed mb-4">
+                            Suivez le guide visuel de l'application :
+                            <ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4">
+                                <li>Inspirez par le nez pendant 4 secondes.</li>
+                                <li>Retenez votre souffle (poumons pleins) pendant 4 secondes.</li>
+                                <li>Expirez lentement par la bouche pendant 4 secondes.</li>
+                                <li>Retenez votre souffle (poumons vides) pendant 4 secondes.</li>
+                            </ul>
+                            Répétez ce cycle pour le nombre de cycles souhaité (ici, 10 cycles).
+                        </p>
+
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Faire de la Respiration Carrée une routine</h3>
+                        <p class="text-base leading-relaxed">
+                            La Respiration Carrée peut être pratiquée à tout moment de la journée, dès que vous ressentez le besoin de vous recentrer ou de gérer un pic de stress. Quelques cycles suffisent pour ressentir un apaisement. Intégrez-la avant une réunion importante, pendant une pause, ou le soir pour faciliter l'endormissement.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-8 text-center text-gray-500 text-sm">
+        <p>&copy; 2024 Naval Group Toulon - Service de Prévention et Santé au Travail</p>
+    </footer>
+
+    <script>
+        // --- Tab Switching Logic ---
+        function showTab(tabId) {
+            // Get all tab content elements
+            const tabContents = document.querySelectorAll('.tab-content');
+            // Hide all tab contents
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Get all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            // Deactivate all tab buttons
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show the selected tab content
+            document.getElementById(tabId).classList.add('active');
+            // Activate the clicked tab button
+            event.currentTarget.classList.add('active');
+
+            // Stop any running exercises when switching tabs
+            stopCoherenceExercise();
+            stopSquareExercise();
+        }
+
+        // --- Common Audio Context Initialization ---
+        let audioContextInitialized = false;
+        async function initializeAudioContext() {
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running' && !audioContextInitialized) {
+                try {
+                    await Tone.start();
+                    console.log("AudioContext démarré par l'utilisateur.");
+                    audioContextInitialized = true;
+                } catch (e) {
+                    console.error("Erreur au démarrage de Tone.context:", e);
+                    audioContextInitialized = false; 
+                }
+            } else if (typeof Tone === 'undefined' && !audioContextInitialized) {
+                console.warn("Tone.js n'est pas chargé, les sons ne fonctionneront pas.");
+                audioContextInitialized = true; 
+            } else {
+                audioContextInitialized = true; 
+            }
+            return audioContextInitialized;
+        }
+
+        // --- Application de Cohérence Cardiaque ---
+        const coherenceCanvas = document.getElementById('breathingCircleCanvas');
+        const coherenceInstructionText = document.getElementById('coherenceInstruction');
+        const coherenceTimerText = document.getElementById('coherenceTimer');
+        const coherenceStartStopBtn = document.getElementById('startStopCoherence');
+        const coherenceMuteBtn = document.getElementById('muteSoundCoherence');
+
+        let isCoherenceRunning = false; // Declare at a higher scope
+        let inhaleSynthC, exhaleSynthC; // Declare at a higher scope
+        let animationIdC;
+        let timerIntervalC;
+        let soundEnabledC = true; // Initial state for coherence sound
+
+        if (coherenceCanvas) {
+            const ctxC = coherenceCanvas.getContext('2d');
+            const baseRadiusC = coherenceCanvas.height / 2 * 0.6; 
+            const maxRadiusC = coherenceCanvas.height / 2 * 0.85; 
+            const minRadiusC = coherenceCanvas.height / 2 * 0.35; 
+            let currentRadiusC = minRadiusC;
+            let inhalingC = true;
+            const totalTimeC = 300; // 5 minutes * 60 seconds
+            let remainingTimeC = totalTimeC;
+
+            function setupCoherenceSounds() {
+                if (typeof Tone !== 'undefined') {
+                    inhaleSynthC = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.5 }, volume: -28 }).toDestination(); 
+                    exhaleSynthC = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.5 }, volume: -28 }).toDestination(); 
+                }
+            }
+            setupCoherenceSounds();
+
+            function drawCoherenceCircle() {
+                ctxC.clearRect(0, 0, coherenceCanvas.width, coherenceCanvas.height);
+                ctxC.beginPath();
+                ctxC.arc(coherenceCanvas.width / 2, coherenceCanvas.height / 2, currentRadiusC, 0, 2 * Math.PI);
+                ctxC.fillStyle = inhalingC ? '#93c5fd' : '#bfdbfe'; 
+                ctxC.fill();
+            }
+
+            function updateCoherenceTimerDisplay() {
+                const minutes = Math.floor(remainingTimeC / 60);
+                const seconds = remainingTimeC % 60;
+                coherenceTimerText.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            let phaseStartTimeC = 0;
+            const phaseDurationC = 5000; 
+
+            function animateCoherence(timestamp) {
+                if (!isCoherenceRunning) return;
+                if (!phaseStartTimeC) phaseStartTimeC = timestamp;
+                const elapsedTimeInPhase = timestamp - phaseStartTimeC;
+
+                if (inhalingC) {
+                    currentRadiusC = minRadiusC + (maxRadiusC - minRadiusC) * (elapsedTimeInPhase / phaseDurationC);
+                    if (elapsedTimeInPhase >= phaseDurationC) {
+                        currentRadiusC = maxRadiusC;
+                        inhalingC = false;
+                        phaseStartTimeC = timestamp;
+                        coherenceInstructionText.textContent = "Expirez...";
+                        if (soundEnabledC && exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerAttackRelease("D4", "4.8s", Tone.now());
+                    }
+                } else {
+                    currentRadiusC = maxRadiusC - (maxRadiusC - minRadiusC) * (elapsedTimeInPhase / phaseDurationC);
+                    if (elapsedTimeInPhase >= phaseDurationC) {
+                        currentRadiusC = minRadiusC;
+                        inhalingC = true;
+                        phaseStartTimeC = timestamp;
+                        coherenceInstructionText.textContent = "Inspirez...";
+                        if (soundEnabledC && inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now());
+                    }
+                }
+                currentRadiusC = Math.max(minRadiusC, Math.min(maxRadiusC, currentRadiusC));
+                drawCoherenceCircle();
+                animationIdC = requestAnimationFrame(animateCoherence);
+            }
+
+            async function startCoherenceExercise() {
+                if (isCoherenceRunning) return;
+                const audioReady = await initializeAudioContext();
+                if (!audioReady && typeof Tone !== 'undefined' && soundEnabledC) { 
+                     console.warn("Impossible de démarrer l'audio. L'exercice continuera sans son.");
+                }
+
+                isCoherenceRunning = true;
+                coherenceStartStopBtn.textContent = "Arrêter";
+                coherenceStartStopBtn.classList.remove('btn-control');
+                coherenceStartStopBtn.classList.add('btn-stop');
+                remainingTimeC = totalTimeC;
+                updateCoherenceTimerDisplay();
+                inhalingC = true;
+                currentRadiusC = minRadiusC;
+                coherenceInstructionText.textContent = "Inspirez...";
+                phaseStartTimeC = performance.now();
+                if (soundEnabledC && inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now());
+
+                if(timerIntervalC) clearInterval(timerIntervalC);
+                timerIntervalC = setInterval(() => {
+                    if (!isCoherenceRunning) { clearInterval(timerIntervalC); return; }
+                    remainingTimeC--;
+                    updateCoherenceTimerDisplay();
+                    if (remainingTimeC <= 0) {
+                        stopCoherenceExercise();
+                        coherenceInstructionText.textContent = "Terminé !";
+                    }
+                }, 1000);
+                if(animationIdC) cancelAnimationFrame(animationIdC);
+                animationIdC = requestAnimationFrame(animateCoherence);
+            }
+
+            window.stopCoherenceExercise = function() { // Make it global for tab switching
+                if (!isCoherenceRunning) return;
+                isCoherenceRunning = false;
+                coherenceStartStopBtn.textContent = "Démarrer";
+                coherenceStartStopBtn.classList.add('btn-control');
+                coherenceStartStopBtn.classList.remove('btn-stop');
+                cancelAnimationFrame(animationIdC);
+                clearInterval(timerIntervalC);
+                coherenceInstructionText.textContent = "Prêt ?";
+                currentRadiusC = minRadiusC;
+                drawCoherenceCircle();
+                if (inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerRelease(Tone.now() + 0.1);
+                if (exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerRelease(Tone.now() + 0.1);
+            }
+
+            coherenceStartStopBtn.addEventListener('click', () => {
+                if (!isCoherenceRunning) startCoherenceExercise();
+                else stopCoherenceExercise();
+            });
+
+            coherenceMuteBtn.addEventListener('click', () => {
+                soundEnabledC = !soundEnabledC;
+                coherenceMuteBtn.textContent = soundEnabledC ? "Son On" : "Son Off";
+                if (typeof Tone !== 'undefined' && audioContextInitialized) Tone.Destination.mute = !soundEnabledC;
+                // Synchronize with square breathing mute button
+                if (squareMuteBtnEl) {
+                    soundEnabledSq = soundEnabledC;
+                    squareMuteBtnEl.textContent = soundEnabledSq ? "Son On" : "Son Off";
+                }
+            });
+            drawCoherenceCircle();
+            updateCoherenceTimerDisplay();
+        }
+
+        // --- Application de Respiration Carrée ---
+        const squareCanvasEl = document.getElementById('squareBreathingCanvas');
+        const squareInstructionEl = document.getElementById('squareInstruction');
+        const squarePhaseTimerEl = document.getElementById('squarePhaseTimer');
+        const squareStartStopBtnEl = document.getElementById('startStopSquare');
+        const squareMuteBtnEl = document.getElementById('muteSoundSquare');
+        const squareBreathingTextEl = document.getElementById('squareBreathingText');
+        const squareCycleCounterEl = document.getElementById('squareCycleCounter');
+
+        let isSquareRunning = false; // Declare at a higher scope
+        let inhaleSynthSq, exhaleSynthSq; // Declare at a higher scope
+        let animationIdSq;
+        let soundEnabledSq = true; // Initial state for square sound
+
+        if (squareCanvasEl) {
+            const ctxS = squareCanvasEl.getContext('2d');
+            const canvasSize = 180;
+            const padding = 20;
+            const squareSide = canvasSize - 2 * padding;
+            const squareX = padding;
+            const squareY = padding;
+            const ballRadius = 8;
+            
+            let currentPhaseSq = 0; 
+            const phaseDurationSq = 4; 
+            let timeInPhaseSq = phaseDurationSq;
+            let timerIntervalSq;
+            let ballPos = { x: squareX, y: squareY };
+
+            const totalCyclesSq = 10;
+            let currentCycleSq = 0;
+
+            const phaseTextsSq = ["Inspirez", "Rétention", "Expirez", "Rétention"];
+            
+            function setupSquareSounds() {
+                if (typeof Tone !== 'undefined') {
+                    inhaleSynthSq = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 0.8 }, volume: -30 }).toDestination();
+                    exhaleSynthSq = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 0.8 }, volume: -30 }).toDestination();
+                }
+            }
+            setupSquareSounds();
+
+            function drawSquareAndBall() {
+                ctxS.clearRect(0, 0, canvasSize, canvasSize);
+                
+                ctxS.strokeStyle = '#93c5fd'; 
+                ctxS.lineWidth = 3;
+                ctxS.strokeRect(squareX, squareY, squareSide, squareSide);
+
+                ctxS.beginPath();
+                ctxS.arc(ballPos.x, ballPos.y, ballRadius, 0, 2 * Math.PI);
+                ctxS.fillStyle = '#ef4444'; 
+                ctxS.fill();
+            }
+
+            function updateSquarePhaseTimerDisplay() {
+                squarePhaseTimerEl.textContent = `00:0${Math.max(0, Math.ceil(timeInPhaseSq))}`;
+            }
+            function updateSquareCycleCounterDisplay() {
+                squareCycleCounterEl.textContent = `Cycle : ${currentCycleSq} / ${totalCyclesSq}`;
+            }
+            
+            let lastTimestampSq = 0;
+            let progressInPhase = 0; 
+
+            function animateSquare(timestamp) {
+                if (!isSquareRunning) return;
+                if (!lastTimestampSq) lastTimestampSq = timestamp;
+
+                const deltaTime = (timestamp - lastTimestampSq) / 1000; 
+                lastTimestampSq = timestamp;
+                
+                timeInPhaseSq -= deltaTime;
+                progressInPhase += deltaTime / phaseDurationSq;
+
+                if (timeInPhaseSq <= 0) {
+                    currentPhaseSq = (currentPhaseSq + 1) % 4;
+                    if (currentPhaseSq === 0) { 
+                        currentCycleSq++;
+                        updateSquareCycleCounterDisplay();
+                        if (currentCycleSq > totalCyclesSq) {
+                            stopSquareExercise();
+                            squareBreathingTextEl.textContent = "Terminé !";
+                            squareInstructionEl.textContent = `${totalCyclesSq} cycles complétés.`;
+                            return;
+                        }
+                    }
+                    timeInPhaseSq = phaseDurationSq;
+                    progressInPhase = 0; 
+                    squareBreathingTextEl.textContent = phaseTextsSq[currentPhaseSq];
+                    squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${phaseDurationSq}s)`;
+
+                    if (soundEnabledSq && audioContextInitialized) {
+                        if (currentPhaseSq === 0 && inhaleSynthSq) { 
+                            inhaleSynthSq.triggerAttackRelease("C4", `${phaseDurationSq - 0.3}s`, Tone.now());
+                        } else if (currentPhaseSq === 2 && exhaleSynthSq) { 
+                            exhaleSynthSq.triggerAttackRelease("G3", `${phaseDurationSq - 0.3}s`, Tone.now());
+                        }
+                    }
+                }
+                updateSquarePhaseTimerDisplay();
+
+                switch (currentPhaseSq) {
+                    case 0: 
+                        ballPos.x = squareX + squareSide * progressInPhase;
+                        ballPos.y = squareY;
+                        break;
+                    case 1: 
+                        ballPos.x = squareX + squareSide;
+                        ballPos.y = squareY + squareSide * progressInPhase;
+                        break;
+                    case 2: 
+                        ballPos.x = squareX + squareSide * (1 - progressInPhase);
+                        ballPos.y = squareY + squareSide;
+                        break;
+                    case 3: 
+                        ballPos.x = squareX;
+                        ballPos.y = squareY + squareSide * (1 - progressInPhase);
+                        break;
+                }
+                ballPos.x = Math.max(squareX, Math.min(squareX + squareSide, ballPos.x));
+                ballPos.y = Math.max(squareY, Math.min(squareY + squareSide, ballPos.y));
+
+                drawSquareAndBall();
+                animationIdSq = requestAnimationFrame(animateSquare);
+            }
+
+            async function startSquareExercise() {
+                if (isSquareRunning) return;
+                const audioReady = await initializeAudioContext();
+                 if (!audioReady && typeof Tone !== 'undefined' && soundEnabledSq) {
+                     console.warn("Impossible de démarrer l'audio. L'exercice continuera sans son.");
+                 }
+
+                isSquareRunning = true;
+                squareStartStopBtnEl.textContent = "Arrêter";
+                squareStartStopBtnEl.classList.remove('btn-control');
+                squareStartStopBtnEl.classList.add('btn-stop');
+                
+                currentCycleSq = 1; 
+                updateSquareCycleCounterDisplay();
+                currentPhaseSq = 0; 
+                timeInPhaseSq = phaseDurationSq;
+                progressInPhase = 0;
+                ballPos = { x: squareX, y: squareY };
+                squareBreathingTextEl.textContent = phaseTextsSq[currentPhaseSq];
+                squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${phaseDurationSq}s)`;
+                updateSquarePhaseTimerDisplay();
+                
+                if (soundEnabledSq && inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerAttackRelease("C4", `${phaseDurationSq - 0.3}s`, Tone.now());
+
+                lastTimestampSq = performance.now();
+                if(animationIdSq) cancelAnimationFrame(animationIdSq);
+                animationIdSq = requestAnimationFrame(animateSquare);
+            }
+
+            window.stopSquareExercise = function() { // Make it global for tab switching
+                if (!isSquareRunning) return;
+                isSquareRunning = false;
+                squareStartStopBtnEl.textContent = "Démarrer";
+                squareStartStopBtnEl.classList.add('btn-control');
+                squareStartStopBtnEl.classList.remove('btn-stop');
+                cancelAnimationFrame(animationIdSq);
+                squareInstructionEl.textContent = "Prêt ? (4s par phase)";
+                squareBreathingTextEl.textContent = "Prêt ?";
+                timeInPhaseSq = phaseDurationSq;
+                currentPhaseSq = 0;
+                currentCycleSq = 0; 
+                updateSquareCycleCounterDisplay();
+                ballPos = { x: squareX, y: squareY }; 
+                updateSquarePhaseTimerDisplay();
+                drawSquareAndBall(); 
+                if (inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerRelease(Tone.now() + 0.1);
+                if (exhaleSynthSq && audioContextInitialized) exhaleSynthSq.triggerRelease(Tone.now() + 0.1);
+            }
+
+            squareStartStopBtnEl.addEventListener('click', () => {
+                if (!isSquareRunning) startSquareExercise();
+                else stopSquareExercise();
+            });
+
+            squareMuteBtnEl.addEventListener('click', () => {
+                soundEnabledSq = !soundEnabledSq;
+                squareMuteBtnEl.textContent = soundEnabledSq ? "Son On" : "Son Off";
+                if (typeof Tone !== 'undefined' && audioContextInitialized) {
+                    Tone.Destination.mute = !soundEnabledSq; 
+                    // Synchronize with coherence cardiaque mute button
+                    if (coherenceMuteBtn) {
+                        soundEnabledC = soundEnabledSq;
+                        coherenceMuteBtn.textContent = soundEnabledC ? "Son On" : "Son Off";
+                    }
+                }
+            });
+            drawSquareAndBall();
+            updateSquarePhaseTimerDisplay();
+            updateSquareCycleCounterDisplay(); 
+        }
+
+        // Initialize with accueil tab shown
+        document.addEventListener('DOMContentLoaded', () => {
+            showTab('accueil');
+        });
+    </script>
+</body>
+</html>
