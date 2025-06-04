@@ -9,6 +9,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <!-- Favicon pour les poumons -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E50000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s-8-4-8-10c0-4 4-8 8-8s8 4 8 8c0 6-8 10-8 10z'%3E%3C/path%3E%3Cpath d='M12 18a4 4 0 0 0 4-4c0-2-2-4-4-4s-4 2-4 4a4 4 0 0 0 4 4z'%3E%3C/path%3E%3C/svg%3E" type="image/svg+xml">
+    <!-- Lien vers le fichier manifeste de l'application web (PWA) -->
+    <link rel="manifest" href="manifest.json">
     <style>
         body {
             font-family: 'Nunito', sans-serif;
@@ -987,7 +989,7 @@
                 ctx_478.textAlign = 'center';
                 ctx_478.textBaseline = 'middle';
                 ctx_478.fillStyle = color;
-                ctx_478.fillText(text, canvasWidth_478 / 2, canvasHeight_478 / 2);
+                ctx_478.fillText(text, canvasWidth_478 / 2, canvasWidth_478 / 2);
                 ctx_478.restore(); // Restore context state (resets globalAlpha)
             }
 
