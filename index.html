@@ -393,6 +393,10 @@
         let timerIntervalC;
         let soundEnabledC = true; 
 
+        // New variables for dots
+        let totalDotsC = 30;
+        let dotsRemainingC = totalDotsC;
+
         if (coherenceCanvas) {
             const ctxC = coherenceCanvas.getContext('2d');
             const baseRadiusC = coherenceCanvas.height / 2 * 0.6; 
@@ -417,6 +421,22 @@
                 ctxC.arc(coherenceCanvas.width / 2, coherenceCanvas.height / 2, currentRadiusC, 0, 2 * Math.PI);
                 ctxC.fillStyle = inhalingC ? '#E50000' : '#CC0000'; /* Rouge Naval Group */
                 ctxC.fill();
+
+                // Draw the 30 dots around the circle
+                // Adjusted dotsOuterRadius to bring them closer to the circle and within canvas bounds
+                const dotsOuterRadius = maxRadiusC + 5; // Closer to the main circle
+                const dotRadius = 4; // Size of each dot
+                const angleStep = (2 * Math.PI) / totalDotsC;
+
+                for (let i = 0; i < dotsRemainingC; i++) {
+                    const angle = i * angleStep;
+                    const dotX = coherenceCanvas.width / 2 + dotsOuterRadius * Math.cos(angle);
+                    const dotY = coherenceCanvas.height / 2 + dotsOuterRadius * Math.sin(angle);
+                    ctxC.beginPath();
+                    ctxC.arc(dotX, dotY, dotRadius, 0, 2 * Math.PI);
+                    ctxC.fillStyle = '#E50000'; // Red color for dots
+                    ctxC.fill();
+                }
             }
 
             function updateCoherenceTimerDisplay() {
@@ -468,8 +488,12 @@
                 coherenceStartStopBtn.textContent = "Arrêter";
                 coherenceStartStopBtn.classList.remove('btn-control');
                 coherenceStartStopBtn.classList.add('btn-stop');
+                
                 remainingTimeC = totalTimeC;
+                dotsRemainingC = totalDotsC; // Reset dots on start
+                drawCoherenceCircle(); // Draw all dots initially
                 updateCoherenceTimerDisplay();
+                
                 inhalingC = true;
                 currentRadiusC = minRadiusC;
                 coherenceInstructionText.textContent = "Inspire..."; // Changed from Inspirez
@@ -481,9 +505,23 @@
                     if (!isCoherenceRunning) { clearInterval(timerIntervalC); return; }
                     remainingTimeC--;
                     updateCoherenceTimerDisplay();
+
+                    // Remove a dot every 10 seconds (one cycle)
+                    // A cycle is 10 seconds (5s inspire + 5s expire)
+                    // totalTimeC = 300s (5 min) -> 30 cycles
+                    // A dot should disappear every 10 seconds.
+                    // The first dot disappears after the first full cycle (10s elapsed, remainingTimeC = 290)
+                    if (remainingTimeC % 10 === 0 && remainingTimeC < totalTimeC) {
+                        dotsRemainingC--;
+                        if (dotsRemainingC < 0) dotsRemainingC = 0; // Prevent negative
+                        drawCoherenceCircle(); // Redraw with fewer dots
+                    }
+
                     if (remainingTimeC <= 0) {
                         stopCoherenceExercise();
                         coherenceInstructionText.textContent = "Terminé !";
+                        dotsRemainingC = 0; // Ensure all dots are gone at the end
+                        drawCoherenceCircle(); // Final redraw
                     }
                 }, 1000);
                 if(animationIdC) cancelAnimationFrame(animationIdC);
@@ -500,7 +538,8 @@
                 clearInterval(timerIntervalC);
                 coherenceInstructionText.textContent = "Prêt ?";
                 currentRadiusC = minRadiusC;
-                drawCoherenceCircle();
+                dotsRemainingC = totalDotsC; // Reset dots on stop
+                drawCoherenceCircle(); // Redraw with all dots
                 if (inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerRelease(Tone.now() + 0.1);
                 if (exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerRelease(Tone.now() + 0.1);
             }
@@ -524,7 +563,7 @@
                     _478MuteBtn.textContent = _478SoundEnabled ? "Son On" : "Son Off";
                 }
             });
-            drawCoherenceCircle();
+            drawCoherenceCircle(); // Initial draw with all dots
             updateCoherenceTimerDisplay();
         }
 
