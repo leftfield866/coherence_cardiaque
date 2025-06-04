@@ -730,16 +730,19 @@
                 progressInPhase = Math.max(0, Math.min(1, progressInPhase));
 
                 let currentText = phaseTextsSq[currentPhaseSq];
-                let currentFontSize = _squareHoldFontSize; 
+                let currentFontSize; 
 
                 // Calculate font size based on phase
                 if (currentPhaseSq === 1) { // Inspire (4s) - text grows
                     currentFontSize = _squareMinFontSize + (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
-                } else if (currentPhaseSq === 2 || currentPhaseSq === 4) { // Retiens (pulsing)
+                } else if (currentPhaseSq === 2) { // Retiens (pulsing, full lungs)
                     const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
                     currentFontSize = _squareHoldFontSize * pulseScale;
                 } else if (currentPhaseSq === 3) { // Expire (4s) - text shrinks
                     currentFontSize = _squareMaxFontSize - (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
+                } else if (currentPhaseSq === 4) { // Retiens (pulsing, empty lungs)
+                    const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
+                    currentFontSize = _squareMinFontSize * pulseScale; // Pulse around min font size
                 }
                 currentFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, currentFontSize)); 
 
@@ -810,14 +813,17 @@
                     const alphaNew = transitionProgress;
 
                     // Recalculate font size for the new text *during* the transition as well
-                    let newTextCalculatedFontSize = _squareHoldFontSize;
+                    let newTextCalculatedFontSize;
                     if (currentPhaseSq === 1) { // Inspire
                         newTextCalculatedFontSize = _squareMinFontSize + (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
-                    } else if (currentPhaseSq === 2 || currentPhaseSq === 4) { // Retiens
+                    } else if (currentPhaseSq === 2) { // Retiens (full lungs)
                         const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
                         newTextCalculatedFontSize = _squareHoldFontSize * pulseScale;
                     } else if (currentPhaseSq === 3) { // Expire
                         newTextCalculatedFontSize = _squareMaxFontSize - (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
+                    } else if (currentPhaseSq === 4) { // Retiens (empty lungs)
+                        const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
+                        newTextCalculatedFontSize = _squareMinFontSize * pulseScale;
                     }
                     newTextCalculatedFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, newTextCalculatedFontSize));
 
@@ -858,6 +864,9 @@
                 progressInPhase = 0;
                 _squareIsTransitioning = false;
 
+                // Reset ball position to start of "Inspire" phase
+                ballPosSq = { x: squareXS, y: squareYS };
+
                 squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${_squarePhaseDurations[currentPhaseSq]}s)`;
 
                 if (soundEnabledSq && inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerAttackRelease("C4", `${_squarePhaseDurations[1] - 0.2}s`, Tone.now());
@@ -880,7 +889,11 @@
                 updateSquareCycleCounterDisplay();
                 timeInPhaseSq = phaseDurationSq;
                 updateSquarePhaseTimerDisplay();
-                drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); // Draw initial "Prêt ?" text
+                
+                // Reset ball position and draw initial state
+                ballPosSq = { x: squareXS, y: squareYS };
+                drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); // Draw initial "Prêt ?" text and ball
+
                 if (inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerRelease(Tone.now() + 0.1);
                 if (exhaleSynthSq && audioContextInitialized) exhaleSynthSq.triggerRelease(Tone.now() + 0.1);
 
@@ -990,7 +1003,7 @@
                     ctx_478.textAlign = 'center';
                     ctx_478.textBaseline = 'middle';
                     ctx_478.fillStyle = color;
-                    ctx_478.fillText(oldText, canvasWidth_478 / 2, canvasHeight_478 / 2);
+                    ctx_478.fillText(oldText, canvasWidth_478 / 2, canvasWidth_478 / 2);
                     ctx_478.restore();
                 }
 
@@ -1002,7 +1015,7 @@
                     ctx_478.textAlign = 'center';
                     ctx_478.textBaseline = 'middle';
                     ctx_478.fillStyle = color;
-                    ctx_478.fillText(newText, canvasWidth_478 / 2, canvasHeight_478 / 2);
+                    ctx_478.fillText(newText, canvasWidth_478 / 2, canvasWidth_478 / 2);
                     ctx_478.restore();
                 }
             }
