@@ -53,9 +53,6 @@
             background-color: #003F8C; /* Bleu moyen pour les fonds de canvas */
         }
         
-        /* Specific canvas text/colors */
-        /* Removed #squareBreathingText as it's now drawn on canvas */
-        
         .instruction-text {
             color: #E50000; /* Rouge accent pour les instructions */
             min-height: 2rem; 
@@ -83,12 +80,22 @@
         .tab-button {
             background-color: #003F8C; /* Bleu moyen pour les onglets inactifs */
             color: #E0E0E0; /* Texte clair */
-            padding: 0.75rem 1.5rem;
+            padding: 0.75rem 1rem; /* Padding ajusté pour mobile par défaut */
             border-radius: 0.5rem 0.5rem 0 0;
             font-weight: 600;
             transition: background-color 0.3s ease, color 0.3s ease;
             cursor: pointer;
+            white-space: nowrap; /* Empêche le texte du bouton de passer à la ligne */
+            /* flex-shrink: 0; sera ajouté via classe Tailwind */
         }
+        
+        /* Media query pour restaurer le padding sur les écrans plus grands */
+        @media (min-width: 640px) { /* Correspond au breakpoint 'sm' de Tailwind */
+            .tab-button {
+                padding: 0.75rem 1.5rem; /* Padding original */
+            }
+        }
+
         .tab-button:hover {
             background-color: #004F9C; /* Bleu plus foncé au survol */
         }
@@ -134,11 +141,12 @@
     </header>
 
     <div class="w-full max-w-4xl mb-8">
-        <div class="flex justify-center mb-4">
-            <button class="tab-button active" onclick="showTab('accueil')">Accueil</button>
-            <button class="tab-button" onclick="showTab('coherence')">Cohérence Cardiaque</button>
-            <button class="tab-button" onclick="showTab('carre')">Respiration Carrée</button>
-            <button class="tab-button" onclick="showTab('478')">Technique 4-7-8</button>
+        <!-- Modifié : conteneur des onglets pour défilement horizontal sur mobile -->
+        <div class="flex overflow-x-auto pb-2 space-x-1 sm:space-x-2 mb-4 sm:justify-center">
+            <button class="tab-button active flex-shrink-0" onclick="showTab('accueil')">Accueil</button>
+            <button class="tab-button flex-shrink-0" onclick="showTab('coherence')">Cohérence Cardiaque</button>
+            <button class="tab-button flex-shrink-0" onclick="showTab('carre')">Respiration Carrée</button>
+            <button class="tab-button flex-shrink-0" onclick="showTab('478')">Technique 4-7-8</button>
         </div>
 
         <!-- Accueil Section -->
@@ -219,10 +227,8 @@
                 <div id="squareAppContainer" class="app-container p-6 rounded-xl">
                     <h3 class="text-xl font-bold text-center mb-6 app-title">Ton Exercice (10 Cycles)</h3>
                     <div class="text-center mb-4">
-                        <!-- Canvas for square breathing text animation -->
                         <canvas id="squareBreathingCanvas" width="180" height="180"></canvas>
                     </div>
-                    <!-- Removed #squareBreathingText div -->
                     <div id="squareInstruction" class="text-center text-xl font-semibold mb-1 instruction-text">Prêt ? (4s par phase)</div>
                     <div id="squareCycleCounter" class="text-center text-sm mb-1 cycle-counter-text">Cycle : 0 / 10</div>
                     <div id="squarePhaseTimer" class="text-center text-4xl font-bold mb-6 timer-text">00:04</div>
@@ -335,29 +341,22 @@
     <script>
         // --- Tab Switching Logic ---
         function showTab(tabId) {
-            // Get all tab content elements
             const tabContents = document.querySelectorAll('.tab-content');
-            // Hide all tab contents
             tabContents.forEach(content => {
                 content.classList.remove('active');
             });
 
-            // Get all tab buttons
             const tabButtons = document.querySelectorAll('.tab-button');
-            // Deactivate all tab buttons
             tabButtons.forEach(button => {
                 button.classList.remove('active');
             });
 
-            // Show the selected tab content
             document.getElementById(tabId).classList.add('active');
-            // Activate the clicked tab button
             event.currentTarget.classList.add('active');
 
-            // Stop any running exercises when switching tabs
             stopCoherenceExercise();
             stopSquareExercise();
-            stop_478Exercise(); // Stop the new 4-7-8 exercise
+            stop_478Exercise();
         }
 
         // --- Common Audio Context Initialization ---
@@ -374,9 +373,9 @@
                 }
             } else if (typeof Tone === 'undefined' && !audioContextInitialized) {
                 console.warn("Tone.js n'est pas chargé, les sons ne fonctionneront pas.");
-                audioContextInitialized = true; 
+                audioContextInitialized = true; // Set to true to prevent repeated warnings if Tone is missing
             } else {
-                audioContextInitialized = true; 
+                audioContextInitialized = true; // Already initialized or Tone is missing
             }
             return audioContextInitialized;
         }
@@ -393,8 +392,6 @@
         let animationIdC;
         let timerIntervalC;
         let soundEnabledC = true; 
-
-        // New variables for dots
         let totalDotsC = 30;
         let dotsRemainingC = totalDotsC;
 
@@ -420,13 +417,11 @@
                 ctxC.clearRect(0, 0, coherenceCanvas.width, coherenceCanvas.height);
                 ctxC.beginPath();
                 ctxC.arc(coherenceCanvas.width / 2, coherenceCanvas.height / 2, currentRadiusC, 0, 2 * Math.PI);
-                ctxC.fillStyle = inhalingC ? '#E50000' : '#CC0000'; /* Rouge Naval Group */
+                ctxC.fillStyle = inhalingC ? '#E50000' : '#CC0000';
                 ctxC.fill();
 
-                // Draw the 30 dots around the circle
-                // Adjusted dotsOuterRadius to bring them closer to the circle and within canvas bounds
-                const dotsOuterRadius = maxRadiusC + 5; // Closer to the main circle
-                const dotRadius = 4; // Size of each dot
+                const dotsOuterRadius = maxRadiusC + 5; 
+                const dotRadius = 4;
                 const angleStep = (2 * Math.PI) / totalDotsC;
 
                 for (let i = 0; i < dotsRemainingC; i++) {
@@ -435,7 +430,7 @@
                     const dotY = coherenceCanvas.height / 2 + dotsOuterRadius * Math.sin(angle);
                     ctxC.beginPath();
                     ctxC.arc(dotX, dotY, dotRadius, 0, 2 * Math.PI);
-                    ctxC.fillStyle = '#E50000'; // Red color for dots
+                    ctxC.fillStyle = '#E50000';
                     ctxC.fill();
                 }
             }
@@ -460,7 +455,7 @@
                         currentRadiusC = maxRadiusC;
                         inhalingC = false;
                         phaseStartTimeC = timestamp;
-                        coherenceInstructionText.textContent = "Expire..."; // Changed from Expirez
+                        coherenceInstructionText.textContent = "Expire...";
                         if (soundEnabledC && exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerAttackRelease("D4", "4.8s", Tone.now());
                     }
                 } else {
@@ -469,7 +464,7 @@
                         currentRadiusC = minRadiusC;
                         inhalingC = true;
                         phaseStartTimeC = timestamp;
-                        coherenceInstructionText.textContent = "Inspire..."; // Changed from Inspirez
+                        coherenceInstructionText.textContent = "Inspire...";
                         if (soundEnabledC && inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now());
                     }
                 }
@@ -491,13 +486,13 @@
                 coherenceStartStopBtn.classList.add('btn-stop');
                 
                 remainingTimeC = totalTimeC;
-                dotsRemainingC = totalDotsC; // Reset dots on start
-                drawCoherenceCircle(); // Draw all dots initially
+                dotsRemainingC = totalDotsC;
+                drawCoherenceCircle();
                 updateCoherenceTimerDisplay();
                 
                 inhalingC = true;
                 currentRadiusC = minRadiusC;
-                coherenceInstructionText.textContent = "Inspire..."; // Changed from Inspirez
+                coherenceInstructionText.textContent = "Inspire...";
                 phaseStartTimeC = performance.now();
                 if (soundEnabledC && inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now());
 
@@ -507,21 +502,17 @@
                     remainingTimeC--;
                     updateCoherenceTimerDisplay();
 
-                    // Remove a dot every 10 seconds (one cycle)
-                    // A cycle is 10 seconds (5s inspire + 5s expire)
-                    // totalTimeC = 300s (5 min) -> 30 cycles
-                    // A dot should disappear after the first full cycle (10s elapsed, remainingTimeC = 290)
                     if (remainingTimeC % 10 === 0 && remainingTimeC < totalTimeC) {
                         dotsRemainingC--;
-                        if (dotsRemainingC < 0) dotsRemainingC = 0; // Prevent negative
-                        drawCoherenceCircle(); // Redraw with fewer dots
+                        if (dotsRemainingC < 0) dotsRemainingC = 0;
+                        drawCoherenceCircle();
                     }
 
                     if (remainingTimeC <= 0) {
                         stopCoherenceExercise();
                         coherenceInstructionText.textContent = "Terminé !";
-                        dotsRemainingC = 0; // Ensure all dots are gone at the end
-                        drawCoherenceCircle(); // Final redraw
+                        dotsRemainingC = 0;
+                        drawCoherenceCircle();
                     }
                 }, 1000);
                 if(animationIdC) cancelAnimationFrame(animationIdC);
@@ -538,8 +529,8 @@
                 clearInterval(timerIntervalC);
                 coherenceInstructionText.textContent = "Prêt ?";
                 currentRadiusC = minRadiusC;
-                dotsRemainingC = totalDotsC; // Reset dots on stop
-                drawCoherenceCircle(); // Redraw with all dots
+                dotsRemainingC = totalDotsC;
+                drawCoherenceCircle();
                 if (inhaleSynthC && audioContextInitialized) inhaleSynthC.triggerRelease(Tone.now() + 0.1);
                 if (exhaleSynthC && audioContextInitialized) exhaleSynthC.triggerRelease(Tone.now() + 0.1);
             }
@@ -553,7 +544,6 @@
                 soundEnabledC = !soundEnabledC;
                 coherenceMuteBtn.textContent = soundEnabledC ? "Son On" : "Son Off";
                 if (typeof Tone !== 'undefined' && audioContextInitialized) Tone.Destination.mute = !soundEnabledC;
-                // Synchronize with other mute buttons
                 if (squareMuteBtnEl) {
                     soundEnabledSq = soundEnabledC;
                     squareMuteBtnEl.textContent = soundEnabledSq ? "Son On" : "Son Off";
@@ -563,7 +553,7 @@
                     _478MuteBtn.textContent = _478SoundEnabled ? "Son On" : "Son Off";
                 }
             });
-            drawCoherenceCircle(); // Initial draw with all dots
+            drawCoherenceCircle();
             updateCoherenceTimerDisplay();
         }
 
@@ -573,69 +563,50 @@
         const squarePhaseTimerEl = document.getElementById('squarePhaseTimer');
         const squareStartStopBtnEl = document.getElementById('startStopSquare');
         const squareMuteBtnEl = document.getElementById('muteSoundSquare');
-        // Removed squareBreathingTextEl as it's now drawn on canvas
         const squareCycleCounterEl = document.getElementById('squareCycleCounter');
 
         let isSquareRunning = false; 
         let inhaleSynthSq, exhaleSynthSq; 
         let animationIdSq;
         let soundEnabledSq = true; 
-
-        // Canvas dimensions for square breathing
-        const canvasSizeSq = 180; // Revert to original size
+        const canvasSizeSq = 180;
         const paddingSq = 20;
-        const squareSideSq = canvasSizeSq - (2 * paddingSq); // Side length of the inner square
-        const squareXS = paddingSq; // X position of the square's top-left corner
-        const squareYS = paddingSq; // Y position of the square's top-left corner
-        const ballRadiusSq = 8; // Radius of the moving ball
-
-        // New variables for square breathing text animation
+        const squareSideSq = canvasSizeSq - (2 * paddingSq);
+        const squareXS = paddingSq;
+        const squareYS = paddingSq;
+        const ballRadiusSq = 8;
         const _squareMinFontSize = 16;
-        let _squareMaxFontSize; // Will be calculated dynamically
+        let _squareMaxFontSize;
         let _squareHoldFontSize;
         const _squarePulseAmplitude = 0.05;
         const _squarePulseFrequency = 4;
-        const _squareTransitionDuration = 0.5; // Shorter transition for faster square rhythm
-
+        const _squareTransitionDuration = 0.5;
         let _squareIsTransitioning = false;
         let _squareTransitionStartTime = 0;
         let _squarePreviousPhaseText = "";
         let _squarePreviousPhaseFontSize;
-
-        // Ball position variable
-        let ballPosSq = { x: squareXS, y: squareYS }; // Initial ball position at top-left corner of the square
+        let ballPosSq = { x: squareXS, y: squareYS };
 
         if (squareCanvasEl) {
             const ctxS = squareCanvasEl.getContext('2d');
-            // Set canvas dimensions explicitly in JS to ensure they match the HTML
             squareCanvasEl.width = canvasSizeSq;
             squareCanvasEl.height = canvasSizeSq;
 
-            // Recalculate _squareMaxFontSize based on the new canvas size
-            // Estimate max text width for "Retiens" (longest word)
-            // A common ratio for text width to font size is around 0.6 to 0.7 for typical fonts.
-            // Let's aim for the text to fit within 80% of the square side.
             const textFitRatioSq = 0.8;
-            // Temporarily set a font to measure text
-            ctxS.font = "60px 'Nunito', sans-serif"; // Use a large font for measurement
+            ctxS.font = "60px 'Nunito', sans-serif";
             const textWidthEstimate = ctxS.measureText("Retiens").width;
-            const estimatedRatio = textWidthEstimate / 60; // Ratio of 60px text width to 60px font size
-
+            const estimatedRatio = textWidthEstimate / 60; 
             _squareMaxFontSize = Math.floor((squareSideSq * textFitRatioSq) / estimatedRatio);
-            _squareMaxFontSize = Math.min(_squareMaxFontSize, 60); // Cap at 60px to prevent excessively large text
+            _squareMaxFontSize = Math.min(_squareMaxFontSize, 60);
             _squareHoldFontSize = _squareMaxFontSize;
-            _squarePreviousPhaseFontSize = _squareHoldFontSize; // Initialize here
+            _squarePreviousPhaseFontSize = _squareHoldFontSize;
 
             let currentPhaseSq = 0; 
             const phaseDurationSq = 4; 
             let timeInPhaseSq = phaseDurationSq;
-            
             const totalCyclesSq = 10;
             let currentCycleSq = 0;
-
-            // Changed to 2nd person singular
-            const phaseTextsSq = ["Prêt ?", "Inspire", "Retiens", "Expire", "Retiens"]; // "Prêt ?" for initial state
-            // Durations for each phase (0 for "Prêt ?")
+            const phaseTextsSq = ["Prêt ?", "Inspire", "Retiens", "Expire", "Retiens"];
             const _squarePhaseDurations = [0, 4, 4, 4, 4];
             
             function setupSquareSounds() {
@@ -647,14 +618,10 @@
             setupSquareSounds();
 
             function drawSquareAndText(text, fontSize, color = '#E0E0E0', alpha = 1) {
-                ctxS.clearRect(0, 0, canvasSizeSq, canvasSizeSq); // Clear the entire canvas
-                
-                // Draw the square outline
-                ctxS.strokeStyle = '#E50000'; /* Rouge Naval Group */
+                ctxS.clearRect(0, 0, canvasSizeSq, canvasSizeSq);
+                ctxS.strokeStyle = '#E50000';
                 ctxS.lineWidth = 3;
                 ctxS.strokeRect(squareXS, squareYS, squareSideSq, squareSideSq);
-
-                // Draw the text
                 ctxS.save();
                 ctxS.globalAlpha = alpha;
                 ctxS.font = `${fontSize}px 'Nunito', sans-serif`;
@@ -663,23 +630,18 @@
                 ctxS.fillStyle = color;
                 ctxS.fillText(text, canvasSizeSq / 2, canvasSizeSq / 2);
                 ctxS.restore();
-
-                // Draw the ball
                 ctxS.beginPath();
                 ctxS.arc(ballPosSq.x, ballPosSq.y, ballRadiusSq, 0, 2 * Math.PI);
-                ctxS.fillStyle = '#E50000'; /* Rouge Naval Group */
+                ctxS.fillStyle = '#E50000';
                 ctxS.fill();
             }
 
             function draw_squareCrossFade(oldText, oldFontSize, newText, newFontSize, alphaOld, alphaNew, color = '#E0E0E0') {
-                ctxS.clearRect(0, 0, canvasSizeSq, canvasSizeSq); // Clear the entire canvas
-
-                // Draw the square outline
-                ctxS.strokeStyle = '#E50000'; /* Rouge Naval Group */
+                ctxS.clearRect(0, 0, canvasSizeSq, canvasSizeSq);
+                ctxS.strokeStyle = '#E50000';
                 ctxS.lineWidth = 3;
                 ctxS.strokeRect(squareXS, squareYS, squareSideSq, squareSideSq);
                 
-                // Draw old text fading out
                 if (alphaOld > 0) {
                     ctxS.save();
                     ctxS.globalAlpha = alphaOld;
@@ -690,8 +652,6 @@
                     ctxS.fillText(oldText, canvasSizeSq / 2, canvasSizeSq / 2);
                     ctxS.restore();
                 }
-
-                // Draw new text fading in
                 if (alphaNew > 0) {
                     ctxS.save();
                     ctxS.globalAlpha = alphaNew;
@@ -702,11 +662,9 @@
                     ctxS.fillText(newText, canvasSizeSq / 2, canvasSizeSq / 2);
                     ctxS.restore();
                 }
-
-                // Draw the ball during transition
                 ctxS.beginPath();
                 ctxS.arc(ballPosSq.x, ballPosSq.y, ballRadiusSq, 0, 2 * Math.PI);
-                ctxS.fillStyle = '#E50000'; /* Rouge Naval Group */
+                ctxS.fillStyle = '#E50000';
                 ctxS.fill();
             }
 
@@ -734,53 +692,48 @@
                 let currentText = phaseTextsSq[currentPhaseSq];
                 let currentFontSize; 
 
-                // Calculate font size based on phase
-                if (currentPhaseSq === 1) { // Inspire (4s) - text grows
+                if (currentPhaseSq === 1) {
                     currentFontSize = _squareMinFontSize + (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
-                } else if (currentPhaseSq === 2) { // Retiens (pulsing, full lungs)
+                } else if (currentPhaseSq === 2) {
                     const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
                     currentFontSize = _squareHoldFontSize * pulseScale;
-                } else if (currentPhaseSq === 3) { // Expire (4s) - text shrinks
+                } else if (currentPhaseSq === 3) {
                     currentFontSize = _squareMaxFontSize - (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
-                } else if (currentPhaseSq === 4) { // Retiens (pulsing, empty lungs)
+                } else if (currentPhaseSq === 4) {
                     const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
-                    currentFontSize = _squareMinFontSize * pulseScale; // Pulse around min font size
+                    currentFontSize = _squareMinFontSize * pulseScale;
                 }
-                currentFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, currentFontSize)); 
+                currentFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, currentFontSize || _squareMinFontSize)); 
 
-                // Update ball position based on current phase and progress
                 switch (currentPhaseSq) {
-                    case 1: // Inspire (top edge, left to right)
+                    case 1: 
                         ballPosSq.x = squareXS + squareSideSq * progressInPhase;
                         ballPosSq.y = squareYS;
                         break;
-                    case 2: // Retiens (right edge, top to bottom)
+                    case 2: 
                         ballPosSq.x = squareXS + squareSideSq;
                         ballPosSq.y = squareYS + squareSideSq * progressInPhase;
                         break;
-                    case 3: // Expire (bottom edge, right to left)
+                    case 3: 
                         ballPosSq.x = squareXS + squareSideSq * (1 - progressInPhase);
                         ballPosSq.y = squareYS + squareSideSq;
                         break;
-                    case 4: // Retiens (left edge, bottom to top)
+                    case 4: 
                         ballPosSq.x = squareXS;
                         ballPosSq.y = squareYS + squareSideSq * (1 - progressInPhase);
                         break;
                 }
-                // Clamp ball position to ensure it stays within the square boundaries
                 ballPosSq.x = Math.max(squareXS, Math.min(squareXS + squareSideSq, ballPosSq.x));
                 ballPosSq.y = Math.max(squareYS, Math.min(squareYS + squareSideSq, ballPosSq.y));
 
-                // Check for phase change and initiate transition
                 if (timeInPhaseSq <= 0 && !_squareIsTransitioning) {
                     _squareIsTransitioning = true;
                     _squareTransitionStartTime = timestamp;
                     _squarePreviousPhaseText = currentText; 
                     _squarePreviousPhaseFontSize = currentFontSize; 
 
-                    // Advance to next phase immediately for logic, but visual will transition
                     currentPhaseSq = (currentPhaseSq + 1) % phaseTextsSq.length;
-                    if (currentPhaseSq === 0) { // If we've completed a full square (after 2nd Retiens)
+                    if (currentPhaseSq === 0) { 
                         currentCycleSq++;
                         updateSquareCycleCounterDisplay();
                         if (currentCycleSq > totalCyclesSq) {
@@ -788,46 +741,42 @@
                             squareInstructionEl.textContent = "Terminé !";
                             return;
                         }
-                        // After a full cycle, the next phase is Inspire (index 1)
                         currentPhaseSq = 1; 
                     }
-                    timeInPhaseSq = _squarePhaseDurations[currentPhaseSq]; // Reset timer for the new phase
-                    progressInPhase = 0; // Reset progress for the new phase
+                    timeInPhaseSq = _squarePhaseDurations[currentPhaseSq];
+                    progressInPhase = 0;
                     squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${_squarePhaseDurations[currentPhaseSq]}s)`;
 
-                    // Play sound for the new phase
                     if (soundEnabledSq && audioContextInitialized) {
-                        if (currentPhaseSq === 1 && inhaleSynthSq) { // Inspire
+                        if (currentPhaseSq === 1 && inhaleSynthSq) {
                             inhaleSynthSq.triggerAttackRelease("C4", `${_squarePhaseDurations[1] - 0.2}s`, Tone.now());
-                        } else if ((currentPhaseSq === 2 || currentPhaseSq === 4) && inhaleSynthSq) { // Retiens (using inhale synth for subtle hold sound)
+                        } else if ((currentPhaseSq === 2 || currentPhaseSq === 4) && inhaleSynthSq) { 
                             inhaleSynthSq.triggerAttackRelease("G3", `${_squarePhaseDurations[currentPhaseSq] - 0.2}s`, Tone.now());
-                        } else if (currentPhaseSq === 3 && exhaleSynthSq) { // Expire
+                        } else if (currentPhaseSq === 3 && exhaleSynthSq) {
                             exhaleSynthSq.triggerAttackRelease("C3", `${_squarePhaseDurations[3] - 0.2}s`, Tone.now());
                         }
                     }
                 }
 
-                // Handle drawing based on transition state
                 if (_squareIsTransitioning) {
                     const transitionElapsedTime = timestamp - _squareTransitionStartTime;
-                    const transitionProgress = Math.max(0, Math.min(1, transitionElapsedTime / _squareTransitionDuration));
+                    const transitionProgress = Math.max(0, Math.min(1, transitionElapsedTime / (_squareTransitionDuration * 1000))); // duration in ms
                     const alphaOld = 1 - transitionProgress;
                     const alphaNew = transitionProgress;
 
-                    // Recalculate font size for the new text *during* the transition as well
                     let newTextCalculatedFontSize;
-                    if (currentPhaseSq === 1) { // Inspire
+                    if (currentPhaseSq === 1) { 
                         newTextCalculatedFontSize = _squareMinFontSize + (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
-                    } else if (currentPhaseSq === 2) { // Retiens (full lungs)
+                    } else if (currentPhaseSq === 2) { 
                         const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
                         newTextCalculatedFontSize = _squareHoldFontSize * pulseScale;
-                    } else if (currentPhaseSq === 3) { // Expire
+                    } else if (currentPhaseSq === 3) { 
                         newTextCalculatedFontSize = _squareMaxFontSize - (_squareMaxFontSize - _squareMinFontSize) * progressInPhase;
-                    } else if (currentPhaseSq === 4) { // Retiens (empty lungs)
+                    } else if (currentPhaseSq === 4) { 
                         const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000);
                         newTextCalculatedFontSize = _squareMinFontSize * pulseScale;
                     }
-                    newTextCalculatedFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, newTextCalculatedFontSize));
+                     newTextCalculatedFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, newTextCalculatedFontSize || _squareMinFontSize));
 
                     draw_squareCrossFade(
                         _squarePreviousPhaseText, _squarePreviousPhaseFontSize,
@@ -839,7 +788,6 @@
                         _squareIsTransitioning = false;
                     }
                 } else {
-                    // Not transitioning, draw current phase text with full opacity
                     drawSquareAndText(currentText, currentFontSize);
                 }
                 
@@ -861,14 +809,11 @@
                 
                 currentCycleSq = 1; 
                 updateSquareCycleCounterDisplay();
-                currentPhaseSq = 1; // Start with "Inspire"
-                timeInPhaseSq = phaseDurationSq;
+                currentPhaseSq = 1;
+                timeInPhaseSq = _squarePhaseDurations[currentPhaseSq]; // Use defined duration
                 progressInPhase = 0;
                 _squareIsTransitioning = false;
-
-                // Reset ball position to start of "Inspire" phase
                 ballPosSq = { x: squareXS, y: squareYS };
-
                 squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${_squarePhaseDurations[currentPhaseSq]}s)`;
 
                 if (soundEnabledSq && inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerAttackRelease("C4", `${_squarePhaseDurations[1] - 0.2}s`, Tone.now());
@@ -886,15 +831,14 @@
                 squareStartStopBtnEl.classList.remove('btn-stop');
                 cancelAnimationFrame(animationIdSq);
                 squareInstructionEl.textContent = "Prêt ? (4s par phase)";
-                currentPhaseSq = 0; // Reset to initial "Prêt ?" state
+                currentPhaseSq = 0;
                 currentCycleSq = 0; 
                 updateSquareCycleCounterDisplay();
-                timeInPhaseSq = phaseDurationSq;
+                timeInPhaseSq = phaseDurationSq; 
                 updateSquarePhaseTimerDisplay();
                 
-                // Reset ball position and draw initial state
                 ballPosSq = { x: squareXS, y: squareYS };
-                drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); // Draw initial "Prêt ?" text and ball
+                drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0');
 
                 if (inhaleSynthSq && audioContextInitialized) inhaleSynthSq.triggerRelease(Tone.now() + 0.1);
                 if (exhaleSynthSq && audioContextInitialized) exhaleSynthSq.triggerRelease(Tone.now() + 0.1);
@@ -915,7 +859,6 @@
                 squareMuteBtnEl.textContent = soundEnabledSq ? "Son On" : "Son Off";
                 if (typeof Tone !== 'undefined' && audioContextInitialized) {
                     Tone.Destination.mute = !soundEnabledSq; 
-                    // Synchronize with other mute buttons
                     if (coherenceMuteBtn) {
                         soundEnabledC = soundEnabledSq;
                         coherenceMuteBtn.textContent = soundEnabledC ? "Son On" : "Son Off";
@@ -926,7 +869,7 @@
                     }
                 }
             });
-            drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); // Initial draw
+            drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0');
             updateSquarePhaseTimerDisplay();
             updateSquareCycleCounterDisplay(); 
         }
@@ -948,56 +891,47 @@
             const ctx_478 = _478Canvas.getContext('2d');
             const canvasWidth_478 = _478Canvas.width;
             const canvasHeight_478 = _478Canvas.height;
-            const _478MinFontSize = 16; // Smallest font size for "Inspire" (end of Expire)
-            const _478MaxFontSize = 60; // Largest font size for "Inspire" (end) and "Expire" (start)
-            const _478HoldFontSize = _478MaxFontSize; // Fixed font size for "Retiens" - same as max
-            const _478PulseAmplitude = 0.05; // How much the "Retiens" text pulses (e.g., 5% size change)
-            const _478PulseFrequency = 4; // How many pulses per second for "Retiens" (e.g., 2 pulses per second)
-            const _478TransitionDuration = 1.0; // Duration of the cross-fade in seconds (increased for more marked transition)
+            const _478MinFontSize = 16;
+            const _478MaxFontSize = 60;
+            const _478HoldFontSize = _478MaxFontSize;
+            const _478PulseAmplitude = 0.05;
+            const _478PulseFrequency = 4;
+            const _478TransitionDuration = 1.0; 
 
-            let _478CurrentPhase = 0; // 0: Expire (initial), 1: Inspire, 2: Retiens (full), 3: Expire (empty)
-            const _478PhaseDurations = [0, 4, 7, 8]; // Durations for (initial expire), inspire, hold, expire
-            let _478TimeInPhase = _478PhaseDurations[1]; // Start with inspire duration
-            
+            let _478CurrentPhase = 0; 
+            const _478PhaseDurations = [0, 4, 7, 8]; 
+            let _478TimeInPhase = _478PhaseDurations[1];
             const _478TotalCycles = 20;
             let _478CurrentCycle = 0;
-
-            // Already in 2nd person singular
             const _478PhaseTexts = ["Prêt ?", "Inspire", "Retiens", "Expire"]; 
-            
-            // Variables for cross-fade
             let _478IsTransitioning = false;
             let _478TransitionStartTime = 0;
             let _478PreviousPhaseText = "";
-            let _478PreviousPhaseFontSize = _478HoldFontSize; // Initialize with a sensible default
+            let _478PreviousPhaseFontSize = _478HoldFontSize;
 
             function setup_478Sounds() {
                 if (typeof Tone !== 'undefined') {
-                    // Increased volume for better audibility, while remaining soft
-                    _478InhaleSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.1, sustain: 0.5, release: 0.5 }, volume: -25 }).toDestination(); // Gentle rise
-                    _478HoldSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.1, decay: 0.1, sustain: 0.8, release: 0.1 }, volume: -30 }).toDestination(); // Soft hum
-                    _478ExhaleSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.1, release: 0.5 }, volume: -25 }).toDestination(); // Gentle fall
+                    _478InhaleSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.1, sustain: 0.5, release: 0.5 }, volume: -25 }).toDestination();
+                    _478HoldSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.1, decay: 0.1, sustain: 0.8, release: 0.1 }, volume: -30 }).toDestination();
+                    _478ExhaleSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.1, release: 0.5 }, volume: -25 }).toDestination();
                 }
             }
             setup_478Sounds();
 
-            function draw_478Text(text, fontSize, color = '#E0E0E0', alpha = 1) { /* Couleur de texte ajustée */
+            function draw_478Text(text, fontSize, color = '#E0E0E0', alpha = 1) {
                 ctx_478.clearRect(0, 0, canvasWidth_478, canvasHeight_478);
-                ctx_478.save(); // Save current context state
-                ctx_478.globalAlpha = alpha; // Apply alpha for fading
+                ctx_478.save();
+                ctx_478.globalAlpha = alpha;
                 ctx_478.font = `${fontSize}px 'Nunito', sans-serif`;
                 ctx_478.textAlign = 'center';
                 ctx_478.textBaseline = 'middle';
                 ctx_478.fillStyle = color;
-                ctx_478.fillText(text, canvasWidth_478 / 2, canvasWidth_478 / 2);
-                ctx_478.restore(); // Restore context state (resets globalAlpha)
+                ctx_478.fillText(text, canvasWidth_478 / 2, canvasHeight_478 / 2);
+                ctx_478.restore();
             }
 
-            // Function to draw text for cross-fade (draws two texts with different alphas)
-            function draw_478CrossFade(oldText, oldFontSize, newText, newFontSize, alphaOld, alphaNew, color = '#E0E0E0') { /* Couleur de texte ajustée */
+            function draw_478CrossFade(oldText, oldFontSize, newText, newFontSize, alphaOld, alphaNew, color = '#E0E0E0') {
                 ctx_478.clearRect(0, 0, canvasWidth_478, canvasHeight_478);
-                
-                // Draw old text fading out
                 if (alphaOld > 0) {
                     ctx_478.save();
                     ctx_478.globalAlpha = alphaOld;
@@ -1005,11 +939,9 @@
                     ctx_478.textAlign = 'center';
                     ctx_478.textBaseline = 'middle';
                     ctx_478.fillStyle = color;
-                    ctx_478.fillText(oldText, canvasWidth_478 / 2, canvasWidth_478 / 2);
+                    ctx_478.fillText(oldText, canvasWidth_478 / 2, canvasHeight_478 / 2);
                     ctx_478.restore();
                 }
-
-                // Draw new text fading in
                 if (alphaNew > 0) {
                     ctx_478.save();
                     ctx_478.globalAlpha = alphaNew;
@@ -1017,7 +949,7 @@
                     ctx_478.textAlign = 'center';
                     ctx_478.textBaseline = 'middle';
                     ctx_478.fillStyle = color;
-                    ctx_478.fillText(newText, canvasWidth_478 / 2, canvasWidth_478 / 2);
+                    ctx_478.fillText(newText, canvasWidth_478 / 2, canvasHeight_478 / 2);
                     ctx_478.restore();
                 }
             }
@@ -1040,35 +972,31 @@
                 const deltaTime = (timestamp - _478LastTimestamp) / 1000;
                 _478LastTimestamp = timestamp;
                 
-                // Update time in phase, even during transition
                 _478TimeInPhase -= deltaTime;
                 _478ProgressInPhase = 1 - (_478TimeInPhase / _478PhaseDurations[_478CurrentPhase]); 
-                _478ProgressInPhase = Math.max(0, Math.min(1, _478ProgressInPhase)); // Clamp progress
+                _478ProgressInPhase = Math.max(0, Math.min(1, _478ProgressInPhase));
 
                 let currentText = _478PhaseTexts[_478CurrentPhase];
                 let currentFontSize = _478HoldFontSize; 
 
-                // Calculate font size based on phase
-                if (_478CurrentPhase === 1) { // Inspire (4s) - text grows
+                if (_478CurrentPhase === 1) { 
                     currentFontSize = _478MinFontSize + (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase;
-                } else if (_478CurrentPhase === 2) { // Retiens (7s) - text pulses
+                } else if (_478CurrentPhase === 2) { 
                     const pulseScale = 1 + _478PulseAmplitude * Math.sin(timestamp * Math.PI * _478PulseFrequency / 1000);
                     currentFontSize = _478HoldFontSize * pulseScale;
-                } else if (_478CurrentPhase === 3) { // Expire (8s) - text shrinks
+                } else if (_478CurrentPhase === 3) { 
                     currentFontSize = _478MaxFontSize - (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase;
                 }
-                currentFontSize = Math.max(_478MinFontSize, Math.min(_478MaxFontSize, currentFontSize)); 
+                currentFontSize = Math.max(_478MinFontSize, Math.min(_478MaxFontSize, currentFontSize || _478MinFontSize)); 
 
-                // Check for phase change and initiate transition
                 if (_478TimeInPhase <= 0 && !_478IsTransitioning) {
                     _478IsTransitioning = true;
                     _478TransitionStartTime = timestamp;
-                    _478PreviousPhaseText = currentText; // Store current text
-                    _478PreviousPhaseFontSize = currentFontSize; // Store current font size
+                    _478PreviousPhaseText = currentText; 
+                    _478PreviousPhaseFontSize = currentFontSize; 
 
-                    // Advance to next phase immediately for logic, but visual will transition
                     _478CurrentPhase = (_478CurrentPhase + 1) % _478PhaseTexts.length;
-                    if (_478CurrentPhase === 0) { // If we've completed a full cycle (after Expire)
+                    if (_478CurrentPhase === 0) { 
                         _478CurrentCycle++;
                         update_478CycleCounterDisplay();
                         if (_478CurrentCycle > _478TotalCycles) {
@@ -1076,43 +1004,39 @@
                             _478InstructionEl.textContent = "Terminé !";
                             return;
                         }
-                        // After a full cycle, the next phase is Inspire (index 1)
                         _478CurrentPhase = 1; 
                     }
-                    _478TimeInPhase = _478PhaseDurations[_478CurrentPhase]; // Reset timer for the new phase
-                    _478ProgressInPhase = 0; // Reset progress for the new phase
+                    _478TimeInPhase = _478PhaseDurations[_478CurrentPhase];
+                    _478ProgressInPhase = 0;
                     _478InstructionEl.textContent = `${_478PhaseTexts[_478CurrentPhase]} (${_478PhaseDurations[_478CurrentPhase]}s)`;
 
-                    // Play sound for the new phase
                     if (_478SoundEnabled && audioContextInitialized) {
-                        if (_478CurrentPhase === 1 && _478InhaleSynth) { // Inspire
+                        if (_478CurrentPhase === 1 && _478InhaleSynth) {
                             _478InhaleSynth.triggerAttackRelease("C4", `${_478PhaseDurations[1] - 0.2}s`, Tone.now());
-                        } else if (_478CurrentPhase === 2 && _478HoldSynth) { // Retiens
+                        } else if (_478CurrentPhase === 2 && _478HoldSynth) {
                             _478HoldSynth.triggerAttackRelease("G3", `${_478PhaseDurations[2] - 0.2}s`, Tone.now());
-                        } else if (_478CurrentPhase === 3 && _478ExhaleSynth) { // Expire
+                        } else if (_478CurrentPhase === 3 && _478ExhaleSynth) {
                             _478ExhaleSynth.triggerAttackRelease("C3", `${_478PhaseDurations[3] - 0.2}s`, Tone.now());
                         }
                     }
                 }
 
-                // Handle drawing based on transition state
                 if (_478IsTransitioning) {
                     const transitionElapsedTime = timestamp - _478TransitionStartTime;
-                    const transitionProgress = Math.max(0, Math.min(1, transitionElapsedTime / _478TransitionDuration));
+                     const transitionProgress = Math.max(0, Math.min(1, transitionElapsedTime / (_478TransitionDuration * 1000))); // duration in ms
                     const alphaOld = 1 - transitionProgress;
                     const alphaNew = transitionProgress;
 
-                    // Recalculate font size for the new text *during* the transition as well
                     let newTextCalculatedFontSize = _478HoldFontSize;
-                    if (_478CurrentPhase === 1) { // Inspire
+                    if (_478CurrentPhase === 1) { 
                         newTextCalculatedFontSize = _478MinFontSize + (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase;
-                    } else if (_478CurrentPhase === 2) { // Retiens (pulsing during transition too)
+                    } else if (_478CurrentPhase === 2) { 
                         const pulseScale = 1 + _478PulseAmplitude * Math.sin(timestamp * Math.PI * _478PulseFrequency / 1000);
                         newTextCalculatedFontSize = _478HoldFontSize * pulseScale;
-                    } else if (_478CurrentPhase === 3) { // Expire
+                    } else if (_478CurrentPhase === 3) { 
                         newTextCalculatedFontSize = _478MaxFontSize - (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase;
                     }
-                    newTextCalculatedFontSize = Math.max(_478MinFontSize, Math.min(_478MaxFontSize, newTextCalculatedFontSize));
+                    newTextCalculatedFontSize = Math.max(_478MinFontSize, Math.min(_478MaxFontSize, newTextCalculatedFontSize || _478MinFontSize));
 
                     draw_478CrossFade(
                         _478PreviousPhaseText, _478PreviousPhaseFontSize,
@@ -1124,7 +1048,6 @@
                         _478IsTransitioning = false;
                     }
                 } else {
-                    // Not transitioning, draw current phase text with full opacity
                     draw_478Text(currentText, currentFontSize);
                 }
                 
@@ -1146,16 +1069,14 @@
                 
                 _478CurrentCycle = 1;
                 update_478CycleCounterDisplay();
-                // Start with the "Inspire" phase (index 1 in _478PhaseTexts and _478PhaseDurations)
                 _478CurrentPhase = 1; 
                 _478TimeInPhase = _478PhaseDurations[_478CurrentPhase];
                 _478ProgressInPhase = 0;
-                _478IsTransitioning = false; // Ensure no lingering transition state
+                _478IsTransitioning = false;
 
                 _478InstructionEl.textContent = `${_478PhaseTexts[_478CurrentPhase]} (${_478PhaseDurations[_478CurrentPhase]}s)`;
                 update_478PhaseTimerDisplay();
                 
-                // Play initial inhale sound
                 if (_478SoundEnabled && _478InhaleSynth && audioContextInitialized) _478InhaleSynth.triggerAttackRelease("C4", `${_478PhaseDurations[1] - 0.2}s`, Tone.now());
 
                 _478LastTimestamp = performance.now();
@@ -1171,17 +1092,16 @@
                 _478StartStopBtn.classList.remove('btn-stop');
                 cancelAnimationFrame(_478AnimationId);
                 _478InstructionEl.textContent = "Prêt ?";
-                _478CurrentPhase = 0; // Reset to initial "Prêt ?" state
+                _478CurrentPhase = 0; 
                 _478CurrentCycle = 0;
                 update_478CycleCounterDisplay();
-                _478TimeInPhase = _478PhaseDurations[1]; // Reset timer for next start
+                _478TimeInPhase = _478PhaseDurations[1]; 
                 update_478PhaseTimerDisplay();
-                draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); // Draw initial "Prêt ?" text with hold font size
+                draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); 
                 if (_478InhaleSynth && audioContextInitialized) _478InhaleSynth.triggerRelease(Tone.now() + 0.1);
                 if (_478HoldSynth && audioContextInitialized) _478HoldSynth.triggerRelease(Tone.now() + 0.1);
                 if (_478ExhaleSynth && audioContextInitialized) _478ExhaleSynth.triggerRelease(Tone.now() + 0.1);
 
-                // Reset transition state variables
                 _478IsTransitioning = false;
                 _478TransitionStartTime = 0;
                 _478PreviousPhaseText = "";
@@ -1198,7 +1118,6 @@
                 _478MuteBtn.textContent = _478SoundEnabled ? "Son On" : "Son Off";
                 if (typeof Tone !== 'undefined' && audioContextInitialized) {
                     Tone.Destination.mute = !_478SoundEnabled;
-                    // Synchronize with other mute buttons
                     if (coherenceMuteBtn) {
                         soundEnabledC = _478SoundEnabled;
                         coherenceMuteBtn.textContent = soundEnabledC ? "Son On" : "Son Off";
@@ -1209,14 +1128,34 @@
                     }
                 }
             });
-            draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); // Initial draw
+            draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); 
             update_478PhaseTimerDisplay();
             update_478CycleCounterDisplay(); 
         }
 
-        // Initialize with accueil tab shown
         document.addEventListener('DOMContentLoaded', () => {
             showTab('accueil');
+            // Attempt to initialize audio context on first user interaction anywhere on the body
+            document.body.addEventListener('click', initializeAudioContext, { once: true });
+            document.body.addEventListener('touchstart', initializeAudioContext, { once: true });
+
+            // Ensure canvas text font sizes are calculated after DOM is ready and fonts are likely loaded
+            if (squareCanvasEl) {
+                 const ctxS = squareCanvasEl.getContext('2d');
+                 const textFitRatioSq = 0.8;
+                 ctxS.font = "60px 'Nunito', sans-serif"; // Use a large font for measurement
+                 const textWidthEstimate = ctxS.measureText("Retiens").width; // Measure a representative word
+                 const estimatedRatio = textWidthEstimate / 60;
+
+                _squareMaxFontSize = Math.floor((squareSideSq * textFitRatioSq) / estimatedRatio);
+                _squareMaxFontSize = Math.min(_squareMaxFontSize, 60); // Cap at 60px
+                _squareHoldFontSize = _squareMaxFontSize;
+                 _squarePreviousPhaseFontSize = _squareHoldFontSize; // Initialize
+                 drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); // Redraw with correct font size
+            }
+             if (_478Canvas) {
+                draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); // Initial draw for 478
+            }
         });
     </script>
 </body>
