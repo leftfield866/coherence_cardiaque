@@ -1,25 +1,96 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santé & Sérénité - Pratiques Respiratoires</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tone.js for audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232dd4bf'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E">
+    
+    <style>
+      @keyframes fadeIn { 
+        from { opacity: 0; transform: translateY(10px); } 
+        to { opacity: 1; transform: translateY(0); } 
+      }
+      .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 flex flex-col min-h-screen">
 
-// --- Tone.js Loader and Audio Engine (Stable Version) ---
-const useAudioEngine = () => {
-    const engine = useRef(null);
-    const [isReady, setIsReady] = useState(false);
+    <!-- Header / Navigation -->
+    <nav class="bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo / Home Button -->
+                <div id="nav-home" class="flex items-center space-x-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="#2dd4bf" viewBox="0 0 24 24" class="w-6 h-6 text-teal-500"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+                    <span class="font-bold text-lg hidden sm:block">Santé & Sérénité</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div id="desktop-nav" class="hidden md:flex items-center space-x-1">
+                    <button data-page="home" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-200">Accueil</button>
+                    <button data-page="coherence" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-200">Cohérence</button>
+                    <button data-page="carree" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-200">Respiration Carrée</button>
+                    <button data-page="478" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-200">Technique 4-7-8</button>
+                    <button data-page="afghane" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-200">Marche Afghane</button>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="p-2 rounded-md text-slate-600 hover:bg-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                 <button data-page="home" class="nav-button text-slate-600 hover:bg-slate-200 block w-full text-left px-3 py-2 rounded-md text-base font-medium">Accueil</button>
+                 <button data-page="coherence" class="nav-button text-slate-600 hover:bg-slate-200 block w-full text-left px-3 py-2 rounded-md text-base font-medium">Cohérence Cardiaque</button>
+                 <button data-page="carree" class="nav-button text-slate-600 hover:bg-slate-200 block w-full text-left px-3 py-2 rounded-md text-base font-medium">Respiration Carrée</button>
+                 <button data-page="478" class="nav-button text-slate-600 hover:bg-slate-200 block w-full text-left px-3 py-2 rounded-md text-base font-medium">Technique 4-7-8</button>
+                 <button data-page="afghane" class="nav-button text-slate-600 hover:bg-slate-200 block w-full text-left px-3 py-2 rounded-md text-base font-medium">Marche Afghane</button>
+            </div>
+        </div>
+    </nav>
 
-    useEffect(() => {
-        if (engine.current) return; 
+    <!-- Main content area -->
+    <main id="app-content" class="flex-grow container mx-auto px-4 py-8"></main>
 
-        const setupAudio = () => {
-            const inspireSynth = new window.Tone.AMSynth({ harmonicity: 1.5, oscillator: { type: 'sine' }, envelope: { attack: 1.5, decay: 0.1, sustain: 1, release: 1.5 }, modulation: { type: 'sine' }, modulationEnvelope: { attack: 0.5, decay: 0.01, sustain: 1, release: 0.5 } }).toDestination();
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-500">
+        <p>Créé pour Naval Group Toulon. Inspiré par les travaux de F. ESPOSITO et F. GENDRE.</p>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const appContent = document.getElementById('app-content');
+        let audio;
+        let activeInterval;
+        let activeTimeout;
+        let animationFrameId;
+
+        function setupAudio() {
+            if (audio) return;
+            const inspireSynth = new Tone.AMSynth({ harmonicity: 1.5, oscillator: { type: 'sine' }, envelope: { attack: 1.5, decay: 0.1, sustain: 1, release: 1.5 }, modulation: { type: 'sine' }, modulationEnvelope: { attack: 0.5, decay: 0.01, sustain: 1, release: 0.5 } }).toDestination();
             inspireSynth.volume.value = -12;
-            const expireSynth = new window.Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 2, decay: 0.1, sustain: 1, release: 2 } }).toDestination();
+            const expireSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 2, decay: 0.1, sustain: 1, release: 2 } }).toDestination();
             expireSynth.volume.value = -18;
-            const retainSynth = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 2, decay: 0.1, sustain: 1, release: 2 } }).toDestination();
+            const retainSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 2, decay: 0.1, sustain: 1, release: 2 } }).toDestination();
             retainSynth.volume.value = -22;
-
-            engine.current = {
+            audio = {
                 isStarted: false,
                 synths: [inspireSynth, expireSynth, retainSynth],
-                async start() { if (this.isStarted) return; await window.Tone.start(); this.isStarted = true; },
+                async start() { if (this.isStarted) return; await Tone.start(); this.isStarted = true; },
                 inspireAttack() { if (this.isStarted) inspireSynth.triggerAttack("C4"); },
                 inspireRelease() { if (this.isStarted) inspireSynth.triggerRelease(); },
                 expireAttack() { if (this.isStarted) expireSynth.triggerAttack("F3"); },
@@ -28,204 +99,136 @@ const useAudioEngine = () => {
                 retainRelease() { if (this.isStarted) retainSynth.triggerRelease(); },
                 releaseAll() { if (this.isStarted) this.synths.forEach(synth => synth.triggerRelease()); }
             };
-            setIsReady(true);
-        };
-
-        if (window.Tone) { setupAudio(); } 
-        else {
-            const script = document.createElement('script');
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js";
-            script.async = true;
-            script.onload = setupAudio;
-            document.body.appendChild(script);
-            return () => { document.body.removeChild(script); };
         }
-    }, []);
-
-    return isReady ? engine.current : null;
-};
-
-// --- Helper Components ---
-const Icon = ({ path, className = "w-6 h-6" }) => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d={path} /></svg>);
-function useInterval(callback, delay) { const savedCallback = React.useRef(); useEffect(() => { savedCallback.current = callback; }, [callback]); useEffect(() => { function tick() { savedCallback.current(); } if (delay !== null) { let id = setInterval(tick, delay); return () => clearInterval(id); } }, [delay]); }
-const useAudioCleanup = (audio) => { useEffect(() => { return () => { audio?.releaseAll(); }; }, [audio]); };
-const ContentCard = ({ children }) => (<div className="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm">{children}</div>);
-const CardTitle = ({ children }) => <h2 className="text-2xl font-bold text-slate-700 mb-3">{children}</h2>;
-const CardList = ({ children }) => (<ul className="list-disc list-inside space-y-2 text-slate-600"> {children} </ul>);
-
-// --- Page Components ---
-const HomePage = ({ navigateTo }) => (<div className="text-center p-4 md:p-8 animate-fade-in"><header className="mb-8"><h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-2">Espace de Pratique Respiratoire</h1><p className="text-lg text-slate-600">Proposé par le Service de Prévention et Santé au Travail de Naval Group Toulon</p></header><main className="max-w-3xl mx-auto text-left space-y-6 bg-white p-6 md:p-8 rounded-2xl shadow-lg"><p className="text-slate-700">Bienvenue ! Suite à l'information sur la gestion du stress animée par Fabienne ESPOSITO et Frédéric GENDRE, cette page vise à vous offrir des outils pratiques pour intégrer ces techniques dans votre quotidien.</p><p className="text-slate-700">Vous trouverez ici plusieurs outils simples et efficaces pour vous aider à cultiver le calme et la sérénité. Prenez quelques instants pour vous, choisissez un exercice et laissez-vous guider.</p><nav className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8"><button onClick={() => navigateTo('coherence')} className="p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /><div><span className="font-bold">Cohérence Cardiaque</span><span className="text-sm block opacity-80">Réguler son rythme cardiaque</span></div></button><button onClick={() => navigateTo('carree')} className="p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /><div><span className="font-bold">Respiration Carrée</span><span className="text-sm block opacity-80">Améliorer sa concentration</span></div></button><button onClick={() => navigateTo('478')} className="p-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /><div><span className="font-bold">Technique 4-7-8</span><span className="text-sm block opacity-80">Favoriser la relaxation profonde</span></div></button><button onClick={() => navigateTo('afghane')} className="p-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75S7.615 1.25 13 1.25c1.518 0 2.94.364 4.248 1.002L17.25 12l4.502 3.002z" /><div><span className="font-bold">Marche Afghane</span><span className="text-sm block opacity-80">Dynamiser corps et esprit</span></div></button></nav></main></div>);
-
-const CardiacCoherence = ({ audio }) => {
-    const DURATION = 300; const [isActive, setIsActive] = useState(false); const [time, setTime] = useState(DURATION); const [instruction, setInstruction] = useState("Prêt ?"); const [isBreathingIn, setIsBreathingIn] = useState(true); useAudioCleanup(audio);
-    const toggle = () => { audio?.start(); setIsActive(!isActive); if(isActive) audio?.releaseAll(); };
-    const reset = () => { setIsActive(false); setTime(DURATION); setInstruction("Prêt ?"); audio?.releaseAll(); };
-    useEffect(() => { if(isActive && time === DURATION) audio?.inspireAttack(); }, [isActive, time, audio]);
-    useInterval(() => { if (isActive && time > 0) { setTime(t => t - 1); const cyclePosition = (DURATION - time) % 10; if (cyclePosition === 0) { setInstruction("Inspirez..."); setIsBreathingIn(true); audio?.expireRelease(); audio?.inspireAttack(); } else if (cyclePosition === 5) { setInstruction("Expirez..."); setIsBreathingIn(false); audio?.inspireRelease(); audio?.expireAttack(); } } else if (time === 0) { setInstruction("Terminé !"); setIsActive(false); audio?.releaseAll(); } }, 1000);
-    const minutes = Math.floor(time / 60); const seconds = time % 60;
-    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Cohérence Cardiaque</h1><div className="relative w-64 h-64 flex items-center justify-center my-4"><div className={`absolute w-full h-full bg-teal-300 rounded-full transition-transform duration-[5000ms] ease-linear ${isBreathingIn && isActive ? 'scale-100' : 'scale-50'}`}></div><div className="relative z-10 text-white font-bold text-3xl"><p>{instruction}</p></div></div><p className="text-5xl font-mono text-slate-700 my-4">{`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`}</p><div className="flex space-x-4"><button onClick={toggle} className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition-colors">{isActive ? 'Pause' : 'Démarrer'}</button><button onClick={reset} className="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><ContentCard><CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">La cohérence cardiaque est une pratique respiratoire qui vise à synchroniser la respiration avec le rythme cardiaque pour équilibrer le système nerveux autonome. En respirant à un rythme de 6 cycles par minute (5s d'inspiration, 5s d'expiration), on stimule le nerf vague, ce qui induit un état de calme et de vigilance. La méthode "365" est un moyen simple de s'en souvenir : <b>3</b> fois par jour, <b>6</b> respirations par minute, pendant <b>5</b> minutes.</p><CardTitle>Les Bienfaits</CardTitle><CardList><li>Réduction immédiate du stress et de l'anxiété.</li><li>Amélioration de la gestion des émotions et de la prise de décision.</li><li>Baisse de la tension artérielle et du rythme cardiaque.</li><li>Augmentation de la concentration et de la clarté mentale.</li><li>Meilleure qualité de sommeil.</li></CardList><CardTitle>Comment Pratiquer</CardTitle><CardList><li>Asseyez-vous confortablement, le dos droit, les pieds à plat sur le sol.</li><li><strong>Inspirez</strong> doucement et profondément par le nez pendant 5 secondes, en sentant votre ventre se gonfler.</li><li><strong>Expirez</strong> lentement par la bouche ou le nez pendant 5 secondes, en laissant votre ventre se dégonfler.</li><li>Concentrez votre attention sur la région de votre cœur.</li><li>Continuez ce cycle pendant 5 minutes, en vous laissant guider par l'animation.</li></CardList></ContentCard></div>);
-};
-
-const SquareBreathing = ({ audio }) => {
-    const [isActive, setIsActive] = useState(false);
-    const [step, setStep] = useState(0); // 0: Prêt, 1: Inspirez, 2: Bloquez, 3: Expirez, 4: Bloquez
-    const INSTRUCTIONS = ["Prêt ?", "Inspirez...", "Bloquez...", "Expirez...", "Bloquez..."];
-    useAudioCleanup(audio);
-
-    // Main interval to change phases (text and audio)
-    useInterval(() => {
-        if (isActive) {
-            setStep(prevStep => (prevStep % 4) + 1);
-        }
-    }, 4000);
-
-    // Effect to handle audio
-    useEffect(() => {
-        if (!isActive) {
-            setStep(0);
-            return;
-        }
-
-        audio?.releaseAll();
-
-        if (step === 1) audio?.inspireAttack();
-        else if (step === 2) audio?.retainAttack();
-        else if (step === 3) audio?.expireAttack();
-        else if (step === 4) audio?.retainAttack();
         
-    }, [step, isActive, audio]);
-    
-    const toggle = () => {
-        audio?.start();
-        const nextIsActive = !isActive;
-        setIsActive(nextIsActive);
-        if (nextIsActive) {
-            setStep(1); // Start the cycle
-        } else {
-            setStep(0); // Pause
-            audio?.releaseAll();
+        function cleanup() {
+            if (activeInterval) clearInterval(activeInterval);
+            if (activeTimeout) clearTimeout(activeTimeout);
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (audio) audio.releaseAll();
         }
-    };
 
-    const reset = () => {
-        setIsActive(false);
-        setStep(0);
-        audio?.releaseAll();
-    };
-    
-    // Determine animation class based on the current step
-    let animationClass = '';
-    if(isActive) {
-        if (step === 1) animationClass = 'animate-inspire';
-        if (step === 2) animationClass = 'animate-hold1';
-        if (step === 3) animationClass = 'animate-expire';
-        if (step === 4) animationClass = 'animate-hold2';
-    }
+        function navigateTo(page) {
+            cleanup();
+            
+            appContent.classList.remove('animate-fade-in');
+            appContent.classList.add('opacity-0');
+            document.getElementById('mobile-menu').classList.add('hidden');
+            
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                btn.classList.remove('bg-teal-100', 'text-teal-700');
+                if (btn.dataset.page === page) {
+                    btn.classList.add('bg-teal-100', 'text-teal-700');
+                }
+            });
 
-    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Respiration Carrée</h1><div className="relative w-56 h-56 border-4 border-sky-400 rounded-lg my-8"><div className={`absolute w-6 h-6 bg-sky-500 rounded-full ${animationClass}`}></div><div className="absolute inset-0 flex items-center justify-center"><p className="text-2xl font-bold text-sky-700">{INSTRUCTIONS[step]}</p></div></div><div className="flex space-x-4 mt-8"><button onClick={toggle} className="px-8 py-3 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600 transition-colors">{isActive ? 'Pause' : 'Démarrer'}</button><button onClick={reset} className="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><ContentCard><CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">Issue des techniques de pranayama (yoga), la respiration carrée (Sama Vritti) est un exercice puissant pour recentrer son attention et calmer le système nerveux. En égalisant les quatre temps de la respiration (inspiration, rétention poumons pleins, expiration, rétention poumons vides), elle instaure un rythme prévisible et apaisant, idéal pour les moments où l'esprit est agité.</p><CardTitle>Les Bienfaits</CardTitle><CardList><li>Améliore la concentration et la présence à l'instant.</li><li>Réduit l'anxiété et les pensées parasites.</li><li>Augmente la capacité pulmonaire et la maîtrise du souffle.</li><li>Procure un sentiment de stabilité et d'équilibre mental.</li></CardList><CardTitle>Comment Pratiquer</CardTitle><CardList><li>Installez-vous confortablement, le dos droit.</li><li>Visualisez un carré. Chaque côté représente une étape de 4 secondes.</li><li><strong>Inspirez</strong> par le nez en comptant jusqu'à 4 (premier côté).</li><li><strong>Bloquez</strong> votre respiration, poumons pleins, en comptant jusqu'à 4 (deuxième côté).</li><li><strong>Expirez</strong> lentement par le nez en comptant jusqu'à 4 (troisième côté).</li><li><strong>Bloquez</strong> votre respiration, poumons vides, en comptant jusqu'à 4 (quatrième côté).</li><li>Répétez le cycle pendant quelques minutes.</li></CardList></ContentCard></div>);
-};
+            setTimeout(() => {
+                appContent.innerHTML = '';
+                if (page === 'home') renderHomePage();
+                if (page === 'coherence') renderCoherencePage();
+                if (page === 'carree') renderCarreePage();
+                if (page === '478') render478Page();
+                if (page === 'afghane') renderAfghanePage();
+                appContent.classList.remove('opacity-0');
+                appContent.classList.add('animate-fade-in');
+            }, 300);
+        }
 
-const Technique478 = ({ audio }) => {
-    const [isActive, setIsActive] = useState(false); const [phase, setPhase] = useState({ name: "Prêt ?", duration: 0, height: 0 }); useAudioCleanup(audio);
-    const cycle = useRef([ { name: "Inspirez...", duration: 4000, height: 100, sound: () => {audio?.releaseAll(); audio?.inspireAttack()} }, { name: "Bloquez...", duration: 7000, height: 100, sound: () => {audio?.releaseAll(); audio?.retainAttack()} }, { name: "Expirez...", duration: 8000, height: 0, sound: () => {audio?.releaseAll(); audio?.expireAttack()} }, ]);
-    const reset = useCallback(() => { setIsActive(false); setPhase({ name: "Prêt ?", duration: 0, height: 0 }); audio?.releaseAll()}, [audio]);
-    useEffect(() => { if (!isActive) return; let i = -1; let t; const n = () => { i = (i + 1) % cycle.current.length; const p = cycle.current[i]; setPhase(p); p.sound(); t = setTimeout(n, p.duration); }; n(); return () => clearTimeout(t); }, [isActive]);
-    const toggle = () => { audio?.start(); if (isActive) { reset(); } else { setIsActive(true); } };
-    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Technique 4-7-8</h1><div className="w-24 h-72 bg-slate-200 rounded-lg overflow-hidden my-8 relative flex justify-center items-end shadow-inner"><div className="w-full bg-indigo-400 rounded-lg" style={{ height: `${phase.height}%`, transition: `height ${phase.duration / 1000}s linear` }}></div><p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-2xl font-bold text-indigo-800">{phase.name}</p></div><div className="flex space-x-4"><button onClick={toggle} className="px-8 py-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors">{isActive ? 'Arrêter' : 'Démarrer'}</button></div><ContentCard><CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">Popularisée par le Dr. Andrew Weil, la technique 4-7-8 est décrite comme un "tranquillisant naturel pour le système nerveux". La longue expiration (8s) est la clé : elle active intensément le système nerveux parasympathique, responsable de la relaxation et du repos. C'est un outil formidable pour contrer une montée de stress ou trouver le sommeil.</p><CardTitle>Les Bienfaits</CardTitle><CardList><li>Aide à s'endormir plus rapidement.</li><li>Calme le système nerveux en cas de crise d'anxiété ou de panique.</li><li>Réduit les fringales liées au stress.</li><li>Permet de se recentrer rapidement avant un événement important.</li></CardList><CardTitle>Comment Pratiquer</CardTitle><CardList><li>Placez le bout de votre langue contre le palais, juste derrière les dents de devant, et gardez-la là pendant tout l'exercice.</li><li><strong>Expirez</strong> complètement par la bouche en faisant un son de souffle ("whoosh").</li><li>Fermez la bouche et <strong>inspirez</strong> calmement par le nez en comptant mentalement jusqu'à <strong>4</strong>.</li><li><strong>Retenez</strong> votre souffle en comptant jusqu'à <strong>7</strong>.</li><li><strong>Expirez</strong> bruyamment par la bouche en comptant jusqu'à <strong>8</strong>.</li><li>Ceci est un cycle. Répétez-le 3 à 4 fois.</li></CardList></ContentCard></div>);
-};
+        document.body.addEventListener('click', (e) => {
+            const button = e.target.closest('.nav-button');
+            if (button) {
+                navigateTo(button.dataset.page);
+            }
+        });
+        document.getElementById('nav-home').addEventListener('click', () => navigateTo('home'));
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        function renderHomePage() {
+            appContent.innerHTML = `<div class="text-center p-4 md:p-8"><header class="mb-8"><h1 class="text-4xl md:text-5xl font-bold text-slate-800 mb-2">Espace de Pratique Respiratoire</h1><p class="text-lg text-slate-600">Proposé par le Service de Prévention et Santé au Travail de Naval Group Toulon</p></header><main class="max-w-3xl mx-auto text-left space-y-6 bg-white p-6 md:p-8 rounded-2xl shadow-lg"><p class="text-slate-700">Bienvenue ! Suite à l'information sur la gestion du stress animée par Fabienne ESPOSITO et Frédéric GENDRE, cette page vise à vous offrir des outils pratiques pour intégrer ces techniques dans votre quotidien.</p><p class="text-slate-700">Vous trouverez ici plusieurs outils simples et efficaces pour vous aider à cultiver le calme et la sérénité. Prenez quelques instants pour vous, choisissez un exercice et laissez-vous guider.</p><nav class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8"><button data-page="coherence" class="nav-button p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><div><span class="font-bold">Cohérence Cardiaque</span><span class="text-sm block opacity-80">Réguler son rythme cardiaque</span></div></button><button data-page="carree" class="nav-button p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><div><span class="font-bold">Respiration Carrée</span><span class="text-sm block opacity-80">Améliorer sa concentration</span></div></button><button data-page="478" class="nav-button p-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><div><span class="font-bold">Technique 4-7-8</span><span class="text-sm block opacity-80">Favoriser la relaxation profonde</span></div></button><button data-page="afghane" class="nav-button p-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><div><span class="font-bold">Marche Afghane</span><span class="text-sm block opacity-80">Dynamiser corps et esprit</span></div></button></nav></main></div>`;
+        }
 
-const AfghanWalk = ({ audio }) => {
-    const [isActive, setIsActive] = useState(false); const [step, setStep] = useState(0); const totalSteps = 10; useAudioCleanup(audio);
-    const getInstruction = () => { if (!isActive) return "Prêt ?"; if (step < 3) return `Inspirez... (Pas ${step + 1})`; if (step < 5) return "Retenez..."; if (step < 8) return `Expirez... (Pas ${step - 5 + 1})`; return "Retenez..."; };
-    const toggle = () => { audio?.start(); setIsActive(!isActive); if(isActive) audio?.releaseAll(); };
-    const reset = () => { setIsActive(false); setStep(0); audio?.releaseAll(); };
-    useEffect(() => { if(!isActive) { setStep(0); return; } if (step === 0) { audio?.releaseAll(); audio?.inspireAttack(); } else if (step === 3) { audio?.releaseAll(); audio?.retainAttack(); } else if (step === 5) { audio?.releaseAll(); audio?.expireAttack(); } else if (step === 8) { audio?.releaseAll(); audio?.retainAttack(); } }, [step, isActive, audio]);
-    useInterval(() => { if (isActive) setStep(s => (s + 1) % totalSteps); }, 1200);
-    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Marche Afghane</h1><div className="w-full max-w-md p-6 bg-white rounded-2xl shadow-lg my-8"><p className="text-4xl font-bold text-emerald-600 mb-4 h-16 flex items-center justify-center">{getInstruction()}</p><div className="flex justify-center items-center space-x-2 h-16">{[...Array(totalSteps)].map((_, i) => (<div key={i} className={`w-4 h-4 rounded-full transition-all duration-300 ${isActive && i === step ? 'bg-emerald-500 scale-125' : 'bg-slate-300'}`}></div>))}</div></div><div className="flex space-x-4"><button onClick={toggle} className="px-8 py-3 bg-emerald-500 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-600 transition-colors">{isActive ? 'Pause' : 'Guidez-moi'}</button><button onClick={reset} className="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div>
-        <ContentCard>
-            <CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">La marche afghane est une technique de marche consciente qui synchronise le rythme des pas avec celui de la respiration. Inspirée par les nomades d'Asie centrale capables de parcourir de longues distances sans fatigue, cette pratique transforme la marche en une méditation active. Le rythme module l'effet : certains sont dynamisants, d'autres relaxants.</p>
-            <CardTitle>Les Bienfaits</CardTitle><CardList><li>Augmente l'oxygénation du corps et l'endurance.</li><li>Réduit la sensation d'effort et la fatigue pendant la marche.</li><li>Calme le mental en le focalisant sur le rythme de la respiration et des pas.</li><li>Améliore la circulation sanguine et la santé cardiovasculaire.</li></CardList>
-            <CardTitle>Comment Pratiquer</CardTitle>
-            <div className="text-slate-600 space-y-2">
-                <p>Trouvez un terrain plat pour commencer et marchez à votre rythme naturel.</p>
-                <p>Adoptez une respiration nasale (par le nez) autant que possible.</p>
-                <p>Synchronisez votre souffle sur le rythme <b>3-2-3-2</b> :</p>
-                <ul className='list-disc list-inside ml-4'>
-                    <li><strong>J'inspire</strong> sur 3 pas.</li>
-                    <li><strong>Je retiens</strong> mon souffle (poumons pleins) sur 2 pas.</li>
-                    <li><strong>J'expire</strong> sur 3 pas.</li>
-                    <li><strong>Je retiens</strong> mon souffle (poumons vides) sur 2 pas.</li>
-                </ul>
-                <p>Concentrez-vous sur cette coordination, le reste se fera naturellement.</p>
-            </div>
-        </ContentCard>
-    </div>);
-};
+        function renderCoherencePage() {
+            appContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4 text-center"><h1 class="text-4xl font-bold text-slate-800 mb-4">Cohérence Cardiaque</h1><div class="relative w-64 h-64 flex items-center justify-center my-4"><div id="circle" class="absolute w-full h-full bg-teal-300 rounded-full transition-transform duration-[5000ms] ease-linear scale-50"></div><div class="relative z-10 text-white font-bold text-3xl"><p id="instruction">Prêt ?</p></div></div><p id="timer" class="text-5xl font-mono text-slate-700 my-4">05:00</p><div class="flex space-x-4"><button id="toggleBtn" class="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition-colors">Démarrer</button><button id="resetBtn" class="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><div class="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm"><h2 class="text-2xl font-bold text-slate-700 mb-3">Description</h2><p class="text-slate-600 mb-4">La cohérence cardiaque est une pratique respiratoire qui vise à synchroniser la respiration avec le rythme cardiaque. En respirant à un rythme de 6 cycles par minute (5s d'inspiration, 5s d'expiration), on stimule le nerf vague, ce qui induit un état de calme et de vigilance.</p><h2 class="text-2xl font-bold text-slate-700 mb-3">Les Bienfaits</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Réduction immédiate du stress et de l'anxiété.</li><li>Amélioration de la gestion des émotions.</li><li>Baisse de la tension artérielle.</li></ul><h2 class="text-2xl font-bold text-slate-700 mb-3">Comment Pratiquer</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Asseyez-vous confortablement, le dos droit.</li><li><strong>Inspirez</strong> par le nez pendant 5 secondes.</li><li><strong>Expirez</strong> lentement par la bouche ou le nez pendant 5 secondes.</li><li>Continuez ce cycle pendant 5 minutes.</li></ul></div></div>`;
+            const DURATION = 300; let time = DURATION; let isActive = false; const instructionEl = document.getElementById('instruction'), timerEl = document.getElementById('timer'), circleEl = document.getElementById('circle'), toggleBtn = document.getElementById('toggleBtn'), resetBtn = document.getElementById('resetBtn');
+            function update() {
+                if (!isActive) return;
+                time--;
+                timerEl.textContent = `${Math.floor(time/60).toString().padStart(2,'0')}:${(time%60).toString().padStart(2,'0')}`;
+                const cyclePosition = (DURATION - time) % 10;
+                if (cyclePosition === 5) {
+                    instructionEl.textContent = "Expirez...";
+                    circleEl.classList.replace('scale-100','scale-50');
+                    audio?.inspireRelease(); audio?.expireAttack();
+                } else if (cyclePosition === 0) {
+                    instructionEl.textContent = "Inspirez...";
+                    circleEl.classList.replace('scale-50','scale-100');
+                    audio?.expireRelease(); audio?.inspireAttack();
+                }
+                if (time <= 0) {
+                    clearInterval(activeInterval);
+                    isActive=false;
+                    toggleBtn.textContent='Démarrer';
+                    instructionEl.textContent="Terminé !";
+                    audio?.releaseAll();
+                }
+            }
+            toggleBtn.addEventListener('click', e => {
+                setupAudio(); audio.start();
+                isActive = !isActive;
+                e.target.textContent = isActive ? 'Pause' : 'Démarrer';
+                if (isActive) {
+                    if (time === DURATION) {
+                        instructionEl.textContent = "Inspirez...";
+                        circleEl.classList.replace('scale-50','scale-100');
+                        audio?.inspireAttack();
+                    }
+                    activeInterval = setInterval(update, 1000);
+                } else {
+                    clearInterval(activeInterval);
+                    audio?.releaseAll();
+                }
+            });
+            resetBtn.addEventListener('click', () => {
+                cleanup();
+                isActive=false; time=DURATION; timerEl.textContent='05:00'; instructionEl.textContent='Prêt ?'; toggleBtn.textContent='Démarrer'; circleEl.classList.replace('scale-100','scale-50');
+            });
+        }
+        
+        function renderCarreePage() {
+            appContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4 text-center"><h1 class="text-4xl font-bold text-slate-800 mb-4">Respiration Carrée</h1><div class="relative w-56 h-56 border-4 border-sky-400 rounded-lg my-8"><div id="dot" class="absolute w-6 h-6 bg-sky-500 rounded-full" style="transform: translate(92px, 92px);"></div><div class="absolute inset-0 flex items-center justify-center"><p id="instruction" class="text-2xl font-bold text-sky-700">Prêt ?</p></div></div><div class="flex space-x-4 mt-8"><button id="toggleBtn" class="px-8 py-3 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600 transition-colors">Démarrer</button><button id="resetBtn" class="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><div class="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm"><h2 class="text-2xl font-bold text-slate-700 mb-3">Description</h2><p class="text-slate-600 mb-4">Issue des techniques de pranayama (yoga), la respiration carrée (Sama Vritti) est un exercice puissant pour recentrer son attention et calmer le système nerveux. En égalisant les quatre temps de la respiration, elle instaure un rythme prévisible et apaisant.</p><h2 class="text-2xl font-bold text-slate-700 mb-3">Les Bienfaits</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Améliore la concentration et la présence à l'instant.</li><li>Réduit l'anxiété et les pensées parasites.</li><li>Procure un sentiment de stabilité et d'équilibre mental.</li></ul><h2 class="text-2xl font-bold text-slate-700 mb-3">Comment Pratiquer</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Installez-vous confortablement, le dos droit.</li><li><strong>Inspirez</strong> par le nez en comptant jusqu'à 4.</li><li><strong>Bloquez</strong> votre respiration, poumons pleins, en comptant jusqu'à 4.</li><li><strong>Expirez</strong> lentement par le nez en comptant jusqu'à 4.</li><li><strong>Bloquez</strong> votre respiration, poumons vides, en comptant jusqu'à 4.</li></ul></div></div>`;
+            const dot = document.getElementById('dot'); const instruction = document.getElementById('instruction'); const toggleBtn = document.getElementById('toggleBtn'); const resetBtn = document.getElementById('resetBtn');
+            let isActive = false; let step = 0; let phaseStartTime = 0; const INSTRUCTIONS = ["Prêt ?", "Inspirez...", "Bloquez...", "Expirez...", "Bloquez..."];
+            function animate(currentTime) { if (!dot || !isActive) return; const elapsedTime = currentTime - phaseStartTime; const progress = Math.min(elapsedTime / 4000, 1); const maxPos = dot.parentElement.offsetWidth - dot.offsetWidth; let top=0, left=0;
+                switch (step) { case 1: top=0; left = progress * maxPos; break; case 2: left = maxPos; top = progress * maxPos; break; case 3: top = maxPos; left = (1-progress) * maxPos; break; case 4: left = 0; top = (1-progress) * maxPos; break; default: top = maxPos/2; left = maxPos/2; }
+                dot.style.transform = `translate(${left}px, ${top}px)`; animationFrameId = requestAnimationFrame(animate);
+            }
+            function changeStep() { if (!isActive) return; step = (step % 4) + 1; phaseStartTime = performance.now(); instruction.textContent = INSTRUCTIONS[step]; audio?.releaseAll(); if (step === 1) audio.inspireAttack(); else if (step === 2) audio.retainAttack(); else if (step === 3) audio.expireAttack(); else if (step === 4) audio.retainAttack(); }
+            toggleBtn.addEventListener('click', () => { setupAudio(); audio.start(); isActive = !isActive; toggleBtn.textContent = isActive ? 'Pause' : 'Démarrer'; if (isActive) { if (step === 0) { changeStep(); } else { phaseStartTime = performance.now() - (performance.now() - phaseStartTime); } activeInterval = setInterval(changeStep, 4000); animationFrameId = requestAnimationFrame(animate); } else { cleanup(); } });
+            resetBtn.addEventListener('click', () => { cleanup(); isActive = false; step = 0; instruction.textContent = 'Prêt ?'; toggleBtn.textContent = 'Démarrer'; const maxPos = dot.parentElement.offsetWidth - dot.offsetWidth; dot.style.transform = `translate(${maxPos/2}px, ${maxPos/2}px)`; });
+        }
 
-// --- Main App Component ---
-export default function App() {
-  const [page, setPage] = useState('home'); const [isMenuOpen, setIsMenuOpen] = useState(false); const audio = useAudioEngine();
-  const navigateTo = (newPage) => { setPage('fading'); setIsMenuOpen(false); setTimeout(() => setPage(newPage), 300); };
-  
-  useEffect(() => { const favicon = document.createElement('link'); favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; favicon.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232dd4bf'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E"; document.head.appendChild(favicon); return () => { document.head.removeChild(favicon); }; }, []);
+        function render478Page() {
+            appContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4 text-center"><h1 class="text-4xl font-bold text-slate-800 mb-4">Technique 4-7-8</h1><div class="w-24 h-72 bg-slate-200 rounded-lg overflow-hidden my-8 relative flex justify-center items-end shadow-inner"><div id="bar" class="w-full bg-indigo-400 rounded-lg" style="height: 0%; transition: height 1s linear;"></div><p id="instruction" class="absolute inset-x-0 top-1/2 -translate-y-1/2 text-2xl font-bold text-indigo-800">Prêt ?</p></div><div class="flex space-x-4"><button id="toggleBtn" class="px-8 py-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors">Démarrer</button></div><div class="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm"><h2 class="text-2xl font-bold text-slate-700 mb-3">Description</h2><p class="text-slate-600 mb-4">Popularisée par le Dr. Andrew Weil, la technique 4-7-8 est un "tranquillisant naturel". La longue expiration est la clé : elle active intensément le système nerveux parasympathique, responsable de la relaxation.</p><h2 class="text-2xl font-bold text-slate-700 mb-3">Les Bienfaits</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Aide à s'endormir plus rapidement.</li><li>Calme le système nerveux en cas de crise d'anxiété.</li><li>Permet de se recentrer rapidement.</li></ul><h2 class="text-2xl font-bold text-slate-700 mb-3">Comment Pratiquer</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Placez le bout de votre langue contre le palais, derrière les dents de devant.</li><li><strong>Expirez</strong> complètement par la bouche en faisant un son de souffle.</li><li>Fermez la bouche et <strong>inspirez</strong> par le nez en comptant jusqu'à <strong>4</strong>.</li><li><strong>Retenez</strong> votre souffle en comptant jusqu'à <strong>7</strong>.</li><li><strong>Expirez</strong> bruyamment par la bouche en comptant jusqu'à <strong>8</strong>.</li></ul></div></div>`;
+            const bar = document.getElementById('bar'); const i = document.getElementById('instruction'); const b = document.getElementById('toggleBtn'); let isActive = false; let phaseIndex = 0; const cycle = [ { name: "Inspirez...", duration: 4000, height: 100, sound: () => { audio?.releaseAll(); audio?.inspireAttack(); } }, { name: "Bloquez...", duration: 7000, height: 100, sound: () => { audio?.releaseAll(); audio?.retainAttack(); } }, { name: "Expirez...", duration: 8000, height: 0, sound: () => { audio?.releaseAll(); audio?.expireAttack(); } }, ];
+            function runCycle() { if (!isActive) return; const p = cycle[phaseIndex]; i.textContent = p.name; bar.style.transition = `height ${p.duration / 1000}s linear`; bar.style.height = `${p.height}%`; p.sound(); activeTimeout = setTimeout(() => { phaseIndex = (phaseIndex + 1) % cycle.length; runCycle(); }, p.duration); }
+            b.addEventListener('click', () => { setupAudio(); audio.start(); isActive = !isActive; b.textContent = isActive ? 'Arrêter' : 'Démarrer'; if (isActive) { runCycle(); } else { cleanup(); phaseIndex = 0; i.textContent = "Prêt ?"; bar.style.height = '0%'; } });
+        }
+        
+        function renderAfghanePage() {
+            appContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4 text-center"><h1 class="text-4xl font-bold text-slate-800 mb-4">Marche Afghane</h1><div class="w-full max-w-md p-6 bg-white rounded-2xl shadow-lg my-8"><p id="instruction" class="text-4xl font-bold text-emerald-600 mb-4 h-16 flex items-center justify-center">Prêt ?</p><div id="dots" class="flex justify-center items-center space-x-2 h-16">${[...Array(10)].map(() => `<div class="w-4 h-4 rounded-full bg-slate-300 transition-all duration-300"></div>`).join('')}</div></div><div class="flex space-x-4"><button id="toggleBtn" class="px-8 py-3 bg-emerald-500 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-600 transition-colors">Guidez-moi</button><button id="resetBtn" class="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><div class="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm"><h2 class="text-2xl font-bold text-slate-700 mb-3">Description</h2><p class="text-slate-600 mb-4">La marche afghane est une technique de marche consciente qui synchronise le rythme des pas avec celui de la respiration. Elle transforme la marche en une méditation active.</p><h2 class="text-2xl font-bold text-slate-700 mb-3">Les Bienfaits</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Augmente l'oxygénation du corps et l'endurance.</li><li>Calme le mental.</li><li>Améliore la circulation sanguine.</li></ul><h2 class="text-2xl font-bold text-slate-700 mb-3">Comment Pratiquer</h2><div class="text-slate-600 space-y-2"><p>Synchronisez votre souffle sur le rythme <b>3-2-3-2</b> :</p><ul class="list-disc list-inside ml-4"><li><strong>J'inspire</strong> sur 3 pas.</li><li><strong>Je retiens</strong> mon souffle (poumons pleins) sur 2 pas.</li><li><strong>J'expire</strong> sur 3 pas.</li><li><strong>Je retiens</strong> mon souffle (poumons vides) sur 2 pas.</li></ul></div></div></div>`;
+            const i = document.getElementById('instruction'), d = document.getElementById('dots').children, t = document.getElementById('toggleBtn'), r = document.getElementById('resetBtn'); let isActive = false, step = 0;
+            function update() { if (!isActive) return; if (step < 3) i.textContent = `Inspirez... (Pas ${step + 1})`; else if (step < 5) i.textContent = "Retenez..."; else if (step < 8) i.textContent = `Expirez... (Pas ${step - 4})`; else i.textContent = "Retenez..."; for (let j=0; j<d.length; j++) { d[j].classList.remove('bg-emerald-500','scale-125'); d[j].classList.add('bg-slate-300'); } d[step].classList.add('bg-emerald-500','scale-125'); if (step === 0) { audio?.releaseAll(); audio?.inspireAttack(); } else if (step === 3) { audio?.releaseAll(); audio?.retainAttack(); } else if (step === 5) { audio?.releaseAll(); audio?.expireAttack(); } else if (step === 8) { audio?.releaseAll(); audio?.retainAttack(); } step = (step + 1) % 10; }
+            t.addEventListener('click', () => { setupAudio(); audio.start(); isActive = !isActive; t.textContent = isActive ? 'Pause' : 'Guidez-moi'; if (isActive) { update(); activeInterval = setInterval(update, 1200); } else { clearInterval(activeInterval); audio?.releaseAll(); } });
+            r.addEventListener('click', () => { cleanup(); isActive = false; step = 0; i.textContent = "Prêt ?"; t.textContent = 'Guidez-moi'; for (let j=0; j<d.length; j++) { d[j].classList.remove('bg-emerald-500','scale-125'); } });
+        }
+        
+        navigateTo('home');
+    });
+    </script>
 
-  const pageContent = () => {
-    switch (page) {
-      case 'home': return <HomePage navigateTo={navigateTo} />;
-      case 'coherence': return <CardiacCoherence audio={audio} />;
-      case 'carree': return <SquareBreathing audio={audio} />;
-      case '478': return <Technique478 audio={audio} />;
-      case 'afghane': return <AfghanWalk audio={audio} />;
-      default: return <HomePage navigateTo={navigateTo} />;
-    }
-  };
-  const navItems = [{ id: 'coherence', label: 'Cohérence' }, { id: 'carree', label: 'Carrée' }, { id: '478', label: '4-7-8' }, { id: 'afghane', label: 'Marche' }];
-  return (<div className="bg-slate-100 min-h-screen font-sans text-slate-800 flex flex-col"><nav className="bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 z-50"><div className="max-w-6xl mx-auto px-4"><div className="flex justify-between items-center h-16"><div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigateTo('home')}><Icon path="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" className="w-6 h-6 text-teal-500"/><span className="font-bold text-lg hidden sm:block">Santé & Sérénité</span></div><div className="hidden md:flex items-center space-x-1">{[{ id: 'home', label: 'Accueil' }, ...navItems].map(item => (<button key={item.id} onClick={() => navigateTo(item.id)} className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${page === item.id ? 'bg-teal-100 text-teal-700' : 'text-slate-600 hover:bg-slate-200'}`}>{item.label}</button>))}</div><div className="md:hidden"><div className="relative"><button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-md text-slate-600 hover:bg-slate-200"><Icon path="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></button>{isMenuOpen && (<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1"><a onClick={() => navigateTo('home')} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer">Accueil</a><div className="border-t my-1"></div>{navItems.map(item => (<a key={item.id} onClick={() => navigateTo(item.id)} className={`block px-4 py-2 text-sm cursor-pointer ${page === item.id ? 'font-bold text-teal-600' : 'text-slate-700 hover:bg-slate-100'}`}>{item.label}</a>))}</div>)}</div></div></div></div></nav><main className={`flex-grow container mx-auto px-4 py-8 transition-opacity duration-300 ${page === 'fading' ? 'opacity-0' : 'opacity-100'}`}>{pageContent()}</main><footer className="text-center py-4 text-xs text-slate-500"><p>Créé pour Naval Group Toulon. Inspiré par les travaux de F. ESPOSITO et F. GENDRE.</p></footer></div>);
-}
-
-const style = document.createElement('style');
-style.innerHTML = `
-  @keyframes fadeIn { 
-    from { opacity: 0; transform: translateY(10px); } 
-    to { opacity: 1; transform: translateY(0); } 
-  }
-  .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-
-  /* New CSS Animations for Square Breathing */
-  @keyframes inspire {
-    from { top: 0; left: 0; }
-    to { top: 0; left: calc(100% - 1.5rem); } /* 1.5rem is w-6 */
-  }
-  .animate-inspire {
-    top: 0; left: 0;
-    animation: inspire 4s linear forwards;
-  }
-  
-  @keyframes hold1 {
-    from { top: 0; left: calc(100% - 1.5rem); }
-    to { top: calc(100% - 1.5rem); left: calc(100% - 1.5rem); }
-  }
-  .animate-hold1 {
-     top: 0; left: calc(100% - 1.5rem);
-     animation: hold1 4s linear forwards;
-  }
-  
-  @keyframes expire {
-    from { top: calc(100% - 1.5rem); left: calc(100% - 1.5rem); }
-    to { top: calc(100% - 1.5rem); left: 0; }
-  }
-  .animate-expire {
-    top: calc(100% - 1.5rem); left: calc(100% - 1.5rem);
-    animation: expire 4s linear forwards;
-  }
-
-  @keyframes hold2 {
-    from { top: calc(100% - 1.5rem); left: 0; }
-    to { top: 0; left: 0; }
-  }
-  .animate-hold2 {
-     top: calc(100% - 1.5rem); left: 0;
-     animation: hold2 4s linear forwards;
-  }
-`;
-document.head.appendChild(style);
+</body>
+</html>
