@@ -1,566 +1,231 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exercices de Respiration Guidés - Naval Group Toulon</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"> 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E50000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s-8-4-8-10c0-4 4-8 8-8s8 4 8 8c0 6-8 10-8 10z'%3E%3C/path%3E%3Cpath d='M12 18a4 4 0 0 0 4-4c0-2-2-4-4-4s-4 2-4 4a4 4 0 0 0 4 4z'%3E%3C/path%3E%3C/svg%3E" type="image/svg+xml">
-    <link rel="manifest" href="manifest.json">
-    <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #001F4C; 
-            color: #E0E0E0; 
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+// --- Tone.js Loader and Audio Engine (Stable Version) ---
+const useAudioEngine = () => {
+    const engine = useRef(null);
+    const [isReady, setIsReady] = useState(false);
+
+    useEffect(() => {
+        if (engine.current) return; 
+
+        const setupAudio = () => {
+            const inspireSynth = new window.Tone.AMSynth({ harmonicity: 1.5, oscillator: { type: 'sine' }, envelope: { attack: 1.5, decay: 0.1, sustain: 1, release: 1.5 }, modulation: { type: 'sine' }, modulationEnvelope: { attack: 0.5, decay: 0.01, sustain: 1, release: 0.5 } }).toDestination();
+            inspireSynth.volume.value = -12;
+            const expireSynth = new window.Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 2, decay: 0.1, sustain: 1, release: 2 } }).toDestination();
+            expireSynth.volume.value = -18;
+            const retainSynth = new window.Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 2, decay: 0.1, sustain: 1, release: 2 } }).toDestination();
+            retainSynth.volume.value = -22;
+
+            engine.current = {
+                isStarted: false,
+                synths: [inspireSynth, expireSynth, retainSynth],
+                async start() { if (this.isStarted) return; await window.Tone.start(); this.isStarted = true; },
+                inspireAttack() { if (this.isStarted) inspireSynth.triggerAttack("C4"); },
+                inspireRelease() { if (this.isStarted) inspireSynth.triggerRelease(); },
+                expireAttack() { if (this.isStarted) expireSynth.triggerAttack("F3"); },
+                expireRelease() { if (this.isStarted) expireSynth.triggerRelease(); },
+                retainAttack() { if (this.isStarted) retainSynth.triggerAttack("C2"); },
+                retainRelease() { if (this.isStarted) retainSynth.triggerRelease(); },
+                releaseAll() { if (this.isStarted) this.synths.forEach(synth => synth.triggerRelease()); }
+            };
+            setIsReady(true);
+        };
+
+        if (window.Tone) { setupAudio(); } 
+        else {
+            const script = document.createElement('script');
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js";
+            script.async = true;
+            script.onload = setupAudio;
+            document.body.appendChild(script);
+            return () => { document.body.removeChild(script); };
         }
-        .app-container {
-            background-color: #002F6C; 
-            border-left: 5px solid #E50000; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    }, []);
+
+    return isReady ? engine.current : null;
+};
+
+// --- Helper Components ---
+const Icon = ({ path, className = "w-6 h-6" }) => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d={path} /></svg>);
+function useInterval(callback, delay) { const savedCallback = React.useRef(); useEffect(() => { savedCallback.current = callback; }, [callback]); useEffect(() => { function tick() { savedCallback.current(); } if (delay !== null) { let id = setInterval(tick, delay); return () => clearInterval(id); } }, [delay]); }
+const useAudioCleanup = (audio) => { useEffect(() => { return () => { audio?.releaseAll(); }; }, [audio]); };
+const ContentCard = ({ children }) => (<div className="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm">{children}</div>);
+const CardTitle = ({ children }) => <h2 className="text-2xl font-bold text-slate-700 mb-3">{children}</h2>;
+const CardList = ({ children }) => (<ul className="list-disc list-inside space-y-2 text-slate-600"> {children} </ul>);
+
+// --- Page Components ---
+const HomePage = ({ navigateTo }) => (<div className="text-center p-4 md:p-8 animate-fade-in"><header className="mb-8"><h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-2">Espace de Pratique Respiratoire</h1><p className="text-lg text-slate-600">Proposé par le Service de Prévention et Santé au Travail de Naval Group Toulon</p></header><main className="max-w-3xl mx-auto text-left space-y-6 bg-white p-6 md:p-8 rounded-2xl shadow-lg"><p className="text-slate-700">Bienvenue ! Suite à l'information sur la gestion du stress animée par Fabienne ESPOSITO et Frédéric GENDRE, cette page vise à vous offrir des outils pratiques pour intégrer ces techniques dans votre quotidien.</p><p className="text-slate-700">Vous trouverez ici plusieurs outils simples et efficaces pour vous aider à cultiver le calme et la sérénité. Prenez quelques instants pour vous, choisissez un exercice et laissez-vous guider.</p><nav className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8"><button onClick={() => navigateTo('coherence')} className="p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /><div><span className="font-bold">Cohérence Cardiaque</span><span className="text-sm block opacity-80">Réguler son rythme cardiaque</span></div></button><button onClick={() => navigateTo('carree')} className="p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /><div><span className="font-bold">Respiration Carrée</span><span className="text-sm block opacity-80">Améliorer sa concentration</span></div></button><button onClick={() => navigateTo('478')} className="p-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /><div><span className="font-bold">Technique 4-7-8</span><span className="text-sm block opacity-80">Favoriser la relaxation profonde</span></div></button><button onClick={() => navigateTo('afghane')} className="p-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-300 text-left flex items-center space-x-3 shadow-md hover:shadow-lg"><Icon path="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75S7.615 1.25 13 1.25c1.518 0 2.94.364 4.248 1.002L17.25 12l4.502 3.002z" /><div><span className="font-bold">Marche Afghane</span><span className="text-sm block opacity-80">Dynamiser corps et esprit</span></div></button></nav></main></div>);
+
+const CardiacCoherence = ({ audio }) => {
+    const DURATION = 300; const [isActive, setIsActive] = useState(false); const [time, setTime] = useState(DURATION); const [instruction, setInstruction] = useState("Prêt ?"); const [isBreathingIn, setIsBreathingIn] = useState(true); useAudioCleanup(audio);
+    const toggle = () => { audio?.start(); setIsActive(!isActive); if(isActive) audio?.releaseAll(); };
+    const reset = () => { setIsActive(false); setTime(DURATION); setInstruction("Prêt ?"); audio?.releaseAll(); };
+    useEffect(() => { if(isActive && time === DURATION) audio?.inspireAttack(); }, [isActive, time, audio]);
+    useInterval(() => { if (isActive && time > 0) { setTime(t => t - 1); const cyclePosition = (DURATION - time) % 10; if (cyclePosition === 0) { setInstruction("Inspirez..."); setIsBreathingIn(true); audio?.expireRelease(); audio?.inspireAttack(); } else if (cyclePosition === 5) { setInstruction("Expirez..."); setIsBreathingIn(false); audio?.inspireRelease(); audio?.expireAttack(); } } else if (time === 0) { setInstruction("Terminé !"); setIsActive(false); audio?.releaseAll(); } }, 1000);
+    const minutes = Math.floor(time / 60); const seconds = time % 60;
+    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Cohérence Cardiaque</h1><div className="relative w-64 h-64 flex items-center justify-center my-4"><div className={`absolute w-full h-full bg-teal-300 rounded-full transition-transform duration-[5000ms] ease-linear ${isBreathingIn && isActive ? 'scale-100' : 'scale-50'}`}></div><div className="relative z-10 text-white font-bold text-3xl"><p>{instruction}</p></div></div><p className="text-5xl font-mono text-slate-700 my-4">{`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`}</p><div className="flex space-x-4"><button onClick={toggle} className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition-colors">{isActive ? 'Pause' : 'Démarrer'}</button><button onClick={reset} className="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><ContentCard><CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">La cohérence cardiaque est une pratique respiratoire qui vise à synchroniser la respiration avec le rythme cardiaque pour équilibrer le système nerveux autonome. En respirant à un rythme de 6 cycles par minute (5s d'inspiration, 5s d'expiration), on stimule le nerf vague, ce qui induit un état de calme et de vigilance. La méthode "365" est un moyen simple de s'en souvenir : <b>3</b> fois par jour, <b>6</b> respirations par minute, pendant <b>5</b> minutes.</p><CardTitle>Les Bienfaits</CardTitle><CardList><li>Réduction immédiate du stress et de l'anxiété.</li><li>Amélioration de la gestion des émotions et de la prise de décision.</li><li>Baisse de la tension artérielle et du rythme cardiaque.</li><li>Augmentation de la concentration et de la clarté mentale.</li><li>Meilleure qualité de sommeil.</li></CardList><CardTitle>Comment Pratiquer</CardTitle><CardList><li>Asseyez-vous confortablement, le dos droit, les pieds à plat sur le sol.</li><li><strong>Inspirez</strong> doucement et profondément par le nez pendant 5 secondes, en sentant votre ventre se gonfler.</li><li><strong>Expirez</strong> lentement par la bouche ou le nez pendant 5 secondes, en laissant votre ventre se dégonfler.</li><li>Concentrez votre attention sur la région de votre cœur.</li><li>Continuez ce cycle pendant 5 minutes, en vous laissant guider par l'animation.</li></CardList></ContentCard></div>);
+};
+
+const SquareBreathing = ({ audio }) => {
+    const [isActive, setIsActive] = useState(false);
+    const [step, setStep] = useState(0); // 0: Prêt, 1: Inspirez, 2: Bloquez, 3: Expirez, 4: Bloquez
+    const INSTRUCTIONS = ["Prêt ?", "Inspirez...", "Bloquez...", "Expirez...", "Bloquez..."];
+    useAudioCleanup(audio);
+
+    // Main interval to change phases (text and audio)
+    useInterval(() => {
+        if (isActive) {
+            setStep(prevStep => (prevStep % 4) + 1);
         }
-        .app-title {
-            color: #E50000; 
-        }
-        .btn-control {
-            background-color: #E50000; 
-            color: white;
-            transition: background-color 0.3s ease;
-        }
-        .btn-control:hover {
-            background-color: #CC0000;
-        }
-        .btn-control-alt {
-            background-color: #003F8C; 
-            color: #E0E0E0; 
-        }
-        .btn-control-alt:hover {
-            background-color: #004F9C; 
-        }
-        .btn-stop {
-            background-color: #FF6666; 
-            color: white;
-        }
-        .btn-stop:hover {
-            background-color: #dc2626; 
+    }, 4000);
+
+    // Effect to handle audio
+    useEffect(() => {
+        if (!isActive) {
+            setStep(0);
+            return;
         }
 
-        #breathingCircleCanvas, #squareBreathingCanvas, #_478BreathingCanvas {
-            background-color: #003F8C; 
-        }
+        audio?.releaseAll();
+
+        if (step === 1) audio?.inspireAttack();
+        else if (step === 2) audio?.retainAttack();
+        else if (step === 3) audio?.expireAttack();
+        else if (step === 4) audio?.retainAttack();
         
-        .instruction-text {
-            color: #E50000; 
-            min-height: 2rem; 
+    }, [step, isActive, audio]);
+    
+    const toggle = () => {
+        audio?.start();
+        const nextIsActive = !isActive;
+        setIsActive(nextIsActive);
+        if (nextIsActive) {
+            setStep(1); // Start the cycle
+        } else {
+            setStep(0); // Pause
+            audio?.releaseAll();
         }
-        .timer-text {
-            color: #E0E0E0; 
-        }
-        .cycle-counter-text {
-            color: #E0E0E0; 
-            font-size: 0.875rem; 
-        }
-        .info-section {
-            background-color: #002F6C; 
-            border: 1px solid #003F8C; 
-            color: #E0E0E0; 
-        }
-        .info-section h3 {
-            color: #E50000; 
-        }
-        .info-section strong {
-            color: #FFFFFF; 
-        }
+    };
 
-        .tab-button {
-            background-color: #003F8C; 
-            color: #E0E0E0; 
-            padding: 0.75rem 1rem; 
-            border-radius: 0.5rem 0.5rem 0 0;
-            font-weight: 600;
-            transition: background-color 0.3s ease, color 0.3s ease;
-            cursor: pointer;
-            white-space: nowrap; 
-        }
-        
-        @media (min-width: 640px) { 
-            .tab-button {
-                padding: 0.75rem 1.5rem; 
-            }
-        }
+    const reset = () => {
+        setIsActive(false);
+        setStep(0);
+        audio?.releaseAll();
+    };
+    
+    // Determine animation class based on the current step
+    let animationClass = '';
+    if(isActive) {
+        if (step === 1) animationClass = 'animate-inspire';
+        if (step === 2) animationClass = 'animate-hold1';
+        if (step === 3) animationClass = 'animate-expire';
+        if (step === 4) animationClass = 'animate-hold2';
+    }
 
-        .tab-button:hover {
-            background-color: #004F9C; 
-        }
-        .tab-button.active {
-            background-color: #001F4C; 
-            color: #E50000; 
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
-            border-top: 3px solid #E50000;
-            border-left: 1px solid #003F8C;
-            border-right: 1px solid #003F8C;
-        }
-        .tab-content {
-            display: none; 
-        }
-        .tab-content.active {
-            display: block; 
-        }
+    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Respiration Carrée</h1><div className="relative w-56 h-56 border-4 border-sky-400 rounded-lg my-8"><div className={`absolute w-6 h-6 bg-sky-500 rounded-full ${animationClass}`}></div><div className="absolute inset-0 flex items-center justify-center"><p className="text-2xl font-bold text-sky-700">{INSTRUCTIONS[step]}</p></div></div><div className="flex space-x-4 mt-8"><button onClick={toggle} className="px-8 py-3 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600 transition-colors">{isActive ? 'Pause' : 'Démarrer'}</button><button onClick={reset} className="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><ContentCard><CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">Issue des techniques de pranayama (yoga), la respiration carrée (Sama Vritti) est un exercice puissant pour recentrer son attention et calmer le système nerveux. En égalisant les quatre temps de la respiration (inspiration, rétention poumons pleins, expiration, rétention poumons vides), elle instaure un rythme prévisible et apaisant, idéal pour les moments où l'esprit est agité.</p><CardTitle>Les Bienfaits</CardTitle><CardList><li>Améliore la concentration et la présence à l'instant.</li><li>Réduit l'anxiété et les pensées parasites.</li><li>Augmente la capacité pulmonaire et la maîtrise du souffle.</li><li>Procure un sentiment de stabilité et d'équilibre mental.</li></CardList><CardTitle>Comment Pratiquer</CardTitle><CardList><li>Installez-vous confortablement, le dos droit.</li><li>Visualisez un carré. Chaque côté représente une étape de 4 secondes.</li><li><strong>Inspirez</strong> par le nez en comptant jusqu'à 4 (premier côté).</li><li><strong>Bloquez</strong> votre respiration, poumons pleins, en comptant jusqu'à 4 (deuxième côté).</li><li><strong>Expirez</strong> lentement par le nez en comptant jusqu'à 4 (troisième côté).</li><li><strong>Bloquez</strong> votre respiration, poumons vides, en comptant jusqu'à 4 (quatrième côté).</li><li>Répétez le cycle pendant quelques minutes.</li></CardList></ContentCard></div>);
+};
 
-        .lung-icon {
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 0.5rem;
-            width: 1.5em; 
-            height: 1.5em;
-            stroke: #E50000; 
-            stroke-width: 2;
-            fill: none;
-        }
+const Technique478 = ({ audio }) => {
+    const [isActive, setIsActive] = useState(false); const [phase, setPhase] = useState({ name: "Prêt ?", duration: 0, height: 0 }); useAudioCleanup(audio);
+    const cycle = useRef([ { name: "Inspirez...", duration: 4000, height: 100, sound: () => {audio?.releaseAll(); audio?.inspireAttack()} }, { name: "Bloquez...", duration: 7000, height: 100, sound: () => {audio?.releaseAll(); audio?.retainAttack()} }, { name: "Expirez...", duration: 8000, height: 0, sound: () => {audio?.releaseAll(); audio?.expireAttack()} }, ]);
+    const reset = useCallback(() => { setIsActive(false); setPhase({ name: "Prêt ?", duration: 0, height: 0 }); audio?.releaseAll()}, [audio]);
+    useEffect(() => { if (!isActive) return; let i = -1; let t; const n = () => { i = (i + 1) % cycle.current.length; const p = cycle.current[i]; setPhase(p); p.sound(); t = setTimeout(n, p.duration); }; n(); return () => clearTimeout(t); }, [isActive]);
+    const toggle = () => { audio?.start(); if (isActive) { reset(); } else { setIsActive(true); } };
+    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Technique 4-7-8</h1><div className="w-24 h-72 bg-slate-200 rounded-lg overflow-hidden my-8 relative flex justify-center items-end shadow-inner"><div className="w-full bg-indigo-400 rounded-lg" style={{ height: `${phase.height}%`, transition: `height ${phase.duration / 1000}s linear` }}></div><p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-2xl font-bold text-indigo-800">{phase.name}</p></div><div className="flex space-x-4"><button onClick={toggle} className="px-8 py-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors">{isActive ? 'Arrêter' : 'Démarrer'}</button></div><ContentCard><CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">Popularisée par le Dr. Andrew Weil, la technique 4-7-8 est décrite comme un "tranquillisant naturel pour le système nerveux". La longue expiration (8s) est la clé : elle active intensément le système nerveux parasympathique, responsable de la relaxation et du repos. C'est un outil formidable pour contrer une montée de stress ou trouver le sommeil.</p><CardTitle>Les Bienfaits</CardTitle><CardList><li>Aide à s'endormir plus rapidement.</li><li>Calme le système nerveux en cas de crise d'anxiété ou de panique.</li><li>Réduit les fringales liées au stress.</li><li>Permet de se recentrer rapidement avant un événement important.</li></CardList><CardTitle>Comment Pratiquer</CardTitle><CardList><li>Placez le bout de votre langue contre le palais, juste derrière les dents de devant, et gardez-la là pendant tout l'exercice.</li><li><strong>Expirez</strong> complètement par la bouche en faisant un son de souffle ("whoosh").</li><li>Fermez la bouche et <strong>inspirez</strong> calmement par le nez en comptant mentalement jusqu'à <strong>4</strong>.</li><li><strong>Retenez</strong> votre souffle en comptant jusqu'à <strong>7</strong>.</li><li><strong>Expirez</strong> bruyamment par la bouche en comptant jusqu'à <strong>8</strong>.</li><li>Ceci est un cycle. Répétez-le 3 à 4 fois.</li></CardList></ContentCard></div>);
+};
 
-        /* Styles spécifiques pour Marche Afghane */
-        #marche { 
-            font-family: 'Inter', sans-serif;
-        }
-        .marche-animation-area { 
-            width: 200px;
-            height: 250px;
-            margin: 20px auto;
-            position: relative;
-            border: 2px solid #4A5568; 
-            border-radius: 8px;
-            background-color: #003F8C; 
-            overflow: hidden;
-        }
-        .marche-person {
-            position: absolute;
-            bottom: 65px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 120px;
-        }
-        .marche-person-head {
-            width: 30px;
-            height: 30px;
-            background-color: #A0AEC0; 
-            border-radius: 50%;
-            margin: 0 auto;
-            position: relative; 
-        }
-        .marche-person-nose {
-            width: 0;
-            height: 0;
-            border-top: 4px solid transparent;
-            border-bottom: 4px solid transparent;
-            border-left: 6px solid #718096; 
-            position: absolute;
-            top: 12px; 
-            left: 28px; 
-            transform: translateY(-50%);
-        }
-        .marche-person-body {
-            width: 20px;
-            height: 50px;
-            background-color: #718096; 
-            margin: 2px auto 0;
-            border-radius: 10px 10px 0 0;
-            position: relative;
-        }
-        .marche-lungs { 
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            position: absolute;
-            top: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            transition: width 0.5s ease-in-out, height 0.5s ease-in-out, background-color 0.5s ease-in-out;
-        }
-        .marche-person-leg {
-            width: 8px;
-            height: 50px;
-            background-color: #718096; 
-            position: absolute;
-            bottom: -45px;
-            border-radius: 0 0 5px 5px;
-            transform-origin: top center; 
-        }
-        .marche-leg-left {
-            left: 18px;
-        }
-        .marche-leg-right {
-            right: 18px;
-        }
-        .marche-step-indicator { 
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.875rem; 
-            color: #CBD5E0; 
-        }
-        .marche-info-card { 
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #002F6C; 
-            border: 1px solid #003F8C;
-            border-radius: 8px;
-            color: #E0E0E0;
-        }
-        .marche-info-card p {
-            margin: 8px 0;
-            font-size: 1.125rem; 
-        }
-        .marche-instruction-paragraph { 
-            min-height: 3.8rem; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
-        .marche-info-card p strong {
-            color: #FFFFFF; 
-        }
-
-        .marche-phase-inspire { background-color: #63B3ED; } 
-        .marche-phase-apnee-pleins { background-color: #4299E1; }
-        .marche-phase-expire { background-color: #68D391; } 
-        .marche-phase-apnee-vides { background-color: #48BB78; }
-
-        @keyframes marcheLegMovesForward {
-            0%   { transform: translateX(-2px) rotate(5deg);  z-index: 1; } 
-            50%  { transform: translateX(5px)  rotate(-10deg); z-index: 2; } 
-            100% { transform: translateX(-2px) rotate(5deg);  z-index: 1; } 
-        }
-        @keyframes marcheLegMovesBackward {
-            0%   { transform: translateX(2px)  rotate(-5deg); z-index: 2; } 
-            50%  { transform: translateX(-5px) rotate(10deg); z-index: 1; } 
-            100% { transform: translateX(2px)  rotate(-5deg); z-index: 2; } 
-        }
-        .marche-walk-left .marche-leg-left { animation: marcheLegMovesForward 0.8s ease-in-out; }
-        .marche-walk-left .marche-leg-right { animation: marcheLegMovesBackward 0.8s ease-in-out; }
-        .marche-walk-right .marche-leg-right { animation: marcheLegMovesForward 0.8s ease-in-out; }
-        .marche-walk-right .marche-leg-left { animation: marcheLegMovesBackward 0.8s ease-in-out; }
-
-        @media (max-width: 640px) {
-            .marche-animation-area { width: 180px; height: 220px; }
-            .marche-person { width: 50px; height: 100px; }
-            .marche-person-head { width: 25px; height: 25px; }
-            .marche-person-nose { top: 10px; left: 23px; border-top-width: 3px; border-bottom-width: 3px; border-left-width: 5px;}
-            .marche-person-body { width: 18px; height: 40px; }
-            .marche-person-leg { height: 40px; bottom: -35px; }
-            .marche-info-card p { font-size: 1rem; }
-            .marche-instruction-paragraph { min-height: 3.2rem; }
-        }
-        #marche-start-button {
-            background-color: #E50000; 
-            color: white;
-            transition: background-color 0.3s ease;
-            font-weight: 600; 
-        }
-        #marche-start-button:hover {
-            background-color: #CC0000; 
-        }
-        #marche-start-button.marche-active { 
-            background-color: #FF6666; 
-        }
-         #marche-start-button.marche-active:hover {
-            background-color: #dc2626;
-        }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col items-center p-4 sm:p-6">
-
-    <header class="mb-8 text-center">
-        <h1 class="text-3xl sm:text-4xl font-bold app-title">
-            <svg class="lung-icon" viewBox="0 0 24 24"><path d="M12 22s-8-4-8-10c0-4 4-8 8-8s8 4 8 8c0 6-8 10-8 10z"></path><path d="M12 18a4 4 0 0 0 4-4c0-2-2-4-4-4s-4 2-4 4a4 4 0 0 0 4 4z"></path></svg>
-            Vos Outils de Respiration
-        </h1>
-        <p class="text-lg text-gray-300 mt-2">Retrouve calme et équilibre avec ces exercices guidés.</p>
-    </header>
-
-    <div class="w-full max-w-4xl mb-8">
-        <div class="flex overflow-x-auto pb-2 space-x-1 sm:space-x-2 mb-4 sm:justify-center">
-            <button class="tab-button active flex-shrink-0" onclick="showTab('accueil', event)">Accueil</button>
-            <button class="tab-button flex-shrink-0" onclick="showTab('coherence', event)">Cohérence Cardiaque</button>
-            <button class="tab-button flex-shrink-0" onclick="showTab('carre', event)">Respiration Carrée</button>
-            <button class="tab-button flex-shrink-0" onclick="showTab('478', event)">Technique 4-7-8</button>
-            <button class="tab-button flex-shrink-0" onclick="showTab('marche', event)">Marche Afghane</button>
-        </div>
-
-        <!-- Accueil Section -->
-        <div id="accueil" class="tab-content active app-container p-6 rounded-lg shadow-md">
-             <h2 class="text-xl font-semibold mb-3 text-center text-red-500">Bienvenue sur ton espace de pratique respiratoire !</h2><p class="text-base leading-relaxed mb-2">Cette page t'est proposée par le <strong class="font-semibold text-white">Service de Prévention et Santé au Travail de Naval Group Toulon</strong>, suite à l'information sur la gestion du stress animée par <strong class="font-semibold text-white">Fabienne ESPOSITO</strong> et <strong class="font-semibold text-white">Frédéric GENDRE</strong>. Elle vise à t'offrir des outils pratiques pour intégrer ces techniques dans ton quotidien.</p><p class="text-base leading-relaxed mb-2">Tu trouveras ici plusieurs outils simples et efficaces pour t'aider à cultiver le calme et la sérénité :</p><ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4 mb-3"><li><strong class="text-red-500">La Cohérence Cardiaque :</strong> Une pratique de 5 minutes pour réguler ton rythme cardiaque.</li><li><strong class="text-red-500">La Respiration Carrée :</strong> Un exercice en 4 temps pour améliorer ta concentration.</li><li><strong class="text-red-500">La Technique 4-7-8 :</strong> Une méthode simple pour favoriser la relaxation profonde.</li><li><strong class="text-red-500">La Marche Afghane Rythmique :</strong> Synchronise ta marche et ta respiration pour dynamiser le corps et apaiser l'esprit.</li></ul><p class="text-base leading-relaxed">Prends quelques instants pour toi, choisis un exercice et laisse-toi guider.</p>
-        </div>
-
-        <!-- Cohérence Cardiaque Section -->
-        <div id="coherence" class="tab-content app-container p-6 rounded-lg shadow-md">
-             <h2 class="text-2xl font-bold text-center mb-6 app-title">Cohérence Cardiaque</h2><p class="text-lg text-gray-300 mt-2 text-center">Harmonise ton rythme cardiaque pour un esprit apaisé.</p>
-            <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mt-6"><div id="coherenceAppContainer" class="app-container p-6 rounded-xl"><h3 class="text-xl font-bold text-center mb-6 app-title">Ton Exercice (5 min)</h3><div class="text-center mb-4"><canvas id="breathingCircleCanvas" width="200" height="200"></canvas></div><div id="coherenceInstruction" class="text-center text-xl font-semibold mb-2 instruction-text">Prêt ?</div><div id="coherenceTimer" class="text-center text-4xl font-bold mb-6 timer-text">05:00</div><div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4"><button id="startStopCoherence" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button><button id="muteSoundCoherence" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button></div></div><div class="info-section p-6 rounded-lg shadow-md flex flex-col justify-between"><div><h3 class="text-xl font-semibold mb-3 text-red-500">Qu'est-ce que la Cohérence Cardiaque ?</h3><p class="text-base leading-relaxed mb-4">La Cohérence Cardiaque est un état d'équilibre physiologique où le cœur, le cerveau et la respiration fonctionnent en harmonie...</p></div></div></div>
-        </div>
-
-        <!-- Respiration Carrée Section -->
-        <div id="carre" class="tab-content app-container p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold text-center mb-6 app-title">Respiration Carrée</h2><p class="text-lg text-gray-300 mt-2 text-center">Un exercice structuré pour la concentration et le calme.</p>
-            <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mt-6"><div id="squareAppContainer" class="app-container p-6 rounded-xl"><h3 class="text-xl font-bold text-center mb-6 app-title">Ton Exercice (10 Cycles)</h3><div class="text-center mb-4"><canvas id="squareBreathingCanvas" width="180" height="180"></canvas></div><div id="squareInstruction" class="text-center text-xl font-semibold mb-1 instruction-text">Prêt ? (4s par phase)</div><div id="squareCycleCounter" class="text-center text-sm mb-1 cycle-counter-text">Cycle : 0 / 10</div><div id="squarePhaseTimer" class="text-center text-4xl font-bold mb-6 timer-text">00:04</div><div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4"><button id="startStopSquare" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button><button id="muteSoundSquare" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button></div></div><div class="info-section p-6 rounded-lg shadow-md flex flex-col justify-between"><div><h3 class="text-xl font-semibold mb-3 text-red-500">Qu'est-ce que la Respiration Carrée ?</h3><p class="text-base leading-relaxed mb-4">La Respiration Carrée (ou "Box Breathing") est une technique...</p></div></div></div>
-        </div>
-
-        <!-- Technique 4-7-8 Section -->
-        <div id="478" class="tab-content app-container p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold text-center mb-6 app-title">Technique 4-7-8</h2><p class="text-lg text-gray-300 mt-2 text-center">La clé d'un endormissement rapide et d'une relaxation profonde.</p>
-            <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mt-6"><div id="_478AppContainer" class="app-container p-6 rounded-xl"><h3 class="text-xl font-bold text-center mb-6 app-title">Ton Exercice 4-7-8 (20 Cycles)</h3><div class="text-center mb-4"><canvas id="_478BreathingCanvas" width="250" height="150"></canvas></div><div id="_478Instruction" class="text-center text-xl font-semibold mb-2 instruction-text">Prêt ?</div><div id="_478CycleCounter" class="text-center text-sm mb-1 cycle-counter-text">Cycle : 0 / 20</div><div id="_478PhaseTimer" class="text-center text-4xl font-bold mb-6 timer-text">00:00</div><div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4"><button id="startStop_478" class="btn-control py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Démarrer</button><button id="muteSound_478" class="btn-control-alt py-2 px-6 rounded-lg font-semibold w-full sm:w-auto">Son On</button></div></div><div class="info-section p-6 rounded-lg shadow-md flex flex-col justify-between"><div><h3 class="text-xl font-semibold mb-3 text-red-500">Qu'est-ce que la technique 4-7-8 ?</h3><p class="text-base leading-relaxed mb-4">Développée par le Dr. Andrew Weil, la technique de respiration 4-7-8...</p></div></div></div>
-        </div>
-
-        <!-- Section Marche Afghane -->
-        <div id="marche" class="tab-content app-container p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold text-center mb-6 app-title">Marche Afghane Rythmique</h2>
-            <p class="text-lg text-gray-300 mt-2 text-center">Synchronise souffle et pas pour une marche dynamique et apaisante.</p>
-            <div class="w-full max-w-xl mx-auto mt-6"> 
-                <div class="marche-animation-area">
-                    <div class="marche-person" id="marche-person-figure">
-                        <div class="marche-person-head"><div class="marche-person-nose"></div></div>
-                        <div class="marche-person-body"><div class="marche-lungs" id="marche-lungs-visual"></div></div>
-                        <div class="marche-person-leg marche-leg-left" id="marche-leg-left"></div>
-                        <div class="marche-person-leg marche-leg-right" id="marche-leg-right"></div>
-                    </div>
-                    <div class="marche-step-indicator" id="marche-step-indicator-visual"></div>
-                </div>
-                <div class="marche-info-card">
-                    <p>Phase: <strong id="marche-phase-name">Prêt</strong></p>
-                    <p class="marche-instruction-paragraph">Instruction: <strong id="marche-instruction-text">Clique pour commencer</strong></p>
-                    <p>Pas: <strong id="marche-step-count">--</strong></p>
-                </div>
-                <button id="marche-start-button" class="mt-6 py-3 px-6 rounded-lg text-lg transition duration-150 ease-in-out w-full sm:w-auto">Démarrer</button>
+const AfghanWalk = ({ audio }) => {
+    const [isActive, setIsActive] = useState(false); const [step, setStep] = useState(0); const totalSteps = 10; useAudioCleanup(audio);
+    const getInstruction = () => { if (!isActive) return "Prêt ?"; if (step < 3) return `Inspirez... (Pas ${step + 1})`; if (step < 5) return "Retenez..."; if (step < 8) return `Expirez... (Pas ${step - 5 + 1})`; return "Retenez..."; };
+    const toggle = () => { audio?.start(); setIsActive(!isActive); if(isActive) audio?.releaseAll(); };
+    const reset = () => { setIsActive(false); setStep(0); audio?.releaseAll(); };
+    useEffect(() => { if(!isActive) { setStep(0); return; } if (step === 0) { audio?.releaseAll(); audio?.inspireAttack(); } else if (step === 3) { audio?.releaseAll(); audio?.retainAttack(); } else if (step === 5) { audio?.releaseAll(); audio?.expireAttack(); } else if (step === 8) { audio?.releaseAll(); audio?.retainAttack(); } }, [step, isActive, audio]);
+    useInterval(() => { if (isActive) setStep(s => (s + 1) % totalSteps); }, 1200);
+    return (<div className="flex flex-col items-center justify-center p-4 text-center animate-fade-in"><h1 className="text-4xl font-bold text-slate-800 mb-4">Marche Afghane</h1><div className="w-full max-w-md p-6 bg-white rounded-2xl shadow-lg my-8"><p className="text-4xl font-bold text-emerald-600 mb-4 h-16 flex items-center justify-center">{getInstruction()}</p><div className="flex justify-center items-center space-x-2 h-16">{[...Array(totalSteps)].map((_, i) => (<div key={i} className={`w-4 h-4 rounded-full transition-all duration-300 ${isActive && i === step ? 'bg-emerald-500 scale-125' : 'bg-slate-300'}`}></div>))}</div></div><div className="flex space-x-4"><button onClick={toggle} className="px-8 py-3 bg-emerald-500 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-600 transition-colors">{isActive ? 'Pause' : 'Guidez-moi'}</button><button onClick={reset} className="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div>
+        <ContentCard>
+            <CardTitle>Description</CardTitle><p className="text-slate-600 mb-4">La marche afghane est une technique de marche consciente qui synchronise le rythme des pas avec celui de la respiration. Inspirée par les nomades d'Asie centrale capables de parcourir de longues distances sans fatigue, cette pratique transforme la marche en une méditation active. Le rythme module l'effet : certains sont dynamisants, d'autres relaxants.</p>
+            <CardTitle>Les Bienfaits</CardTitle><CardList><li>Augmente l'oxygénation du corps et l'endurance.</li><li>Réduit la sensation d'effort et la fatigue pendant la marche.</li><li>Calme le mental en le focalisant sur le rythme de la respiration et des pas.</li><li>Améliore la circulation sanguine et la santé cardiovasculaire.</li></CardList>
+            <CardTitle>Comment Pratiquer</CardTitle>
+            <div className="text-slate-600 space-y-2">
+                <p>Trouvez un terrain plat pour commencer et marchez à votre rythme naturel.</p>
+                <p>Adoptez une respiration nasale (par le nez) autant que possible.</p>
+                <p>Synchronisez votre souffle sur le rythme <b>3-2-3-2</b> :</p>
+                <ul className='list-disc list-inside ml-4'>
+                    <li><strong>J'inspire</strong> sur 3 pas.</li>
+                    <li><strong>Je retiens</strong> mon souffle (poumons pleins) sur 2 pas.</li>
+                    <li><strong>J'expire</strong> sur 3 pas.</li>
+                    <li><strong>Je retiens</strong> mon souffle (poumons vides) sur 2 pas.</li>
+                </ul>
+                <p>Concentrez-vous sur cette coordination, le reste se fera naturellement.</p>
             </div>
-             <div class="info-section p-6 rounded-lg shadow-md mt-8">
-                <h3 class="text-xl font-semibold mb-3 text-red-500">Qu'est-ce que la Marche Afghane ?</h3>
-                <p class="text-base leading-relaxed mb-4">La marche afghane est une technique de marche synchronisée avec la respiration. Elle vise à optimiser l'oxygénation du corps, augmenter l'endurance et procurer un état de bien-être. Le rythme de base proposé ici est : 3 pas en inspirant, 2 pas en <strong class="text-white">rétention</strong> (poumons pleins), 3 pas en expirant, et 2 pas en <strong class="text-white">rétention</strong> (poumons vides).</p>
-                <h3 class="text-xl font-semibold mb-3 text-red-500">Les Bienfaits</h3>
-                <ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4 mb-4"><li>Améliore la capacité respiratoire et l'oxygénation.</li><li>Augmente l'endurance et réduit la fatigue à l'effort.</li><li>Procure un effet calmant et revitalisant.</li><li>Améliore la concentration et la présence à soi.</li><li>Peut se pratiquer en ville, à la campagne, en montée ou sur terrain plat.</li></ul>
-                 <h3 class="text-xl font-semibold mb-3 text-red-500">Comment pratiquer avec ce guide ?</h3>
-                <p class="text-base leading-relaxed mb-2">Tout doit toujours être fait dans <strong class="text-white">l'aisance</strong>. Clique sur "Démarrer". L'animation t'indiquera la phase respiratoire et le nombre de pas à effectuer pour chaque phase. Essaie de synchroniser tes pas avec l'indicateur visuel. Chaque "tic" sonore (si le son est activé globalement) peut être assimilé à un pas. L'exercice est conçu pour une marche à un rythme modéré.</p>
-                <p class="text-base leading-relaxed mb-2">Si le terrain devient en <strong class="text-white">montée</strong>, il est crucial d'adapter ta respiration :<ul class="list-disc list-inside space-y-1 text-base leading-relaxed pl-4 my-2"><li>Tu peux passer à une inspiration sur <strong class="text-white">2 pas</strong> et une expiration sur <strong class="text-white">2 pas</strong>, en supprimant les temps de rétention.</li><li>Si cela est encore difficile, n'hésite pas à adopter un rythme d'une inspiration sur <strong class="text-white">1 pas</strong> et une expiration sur <strong class="text-white">1 pas</strong>, toujours sans rétention.</li></ul></p>
-                <p class="text-base leading-relaxed">L'objectif est de pouvoir ensuite remoduler ta respiration lorsque le terrain redevient plus accessible et de reprendre le rythme de base ou un autre qui te convient, car tout l'art est dans <strong class="text-white">l'adaptation</strong>. C'est une marche <strong class="text-white">méditative</strong> où l'écoute de ton corps est primordiale.</p>
-            </div>
-        </div>
-    </div>
+        </ContentCard>
+    </div>);
+};
 
-    <footer class="mt-8 text-center text-gray-400 text-sm"><p>&copy; 2025 Naval Group Toulon - Service de Prévention et Santé au Travail</p></footer>
+// --- Main App Component ---
+export default function App() {
+  const [page, setPage] = useState('home'); const [isMenuOpen, setIsMenuOpen] = useState(false); const audio = useAudioEngine();
+  const navigateTo = (newPage) => { setPage('fading'); setIsMenuOpen(false); setTimeout(() => setPage(newPage), 300); };
+  
+  useEffect(() => { const favicon = document.createElement('link'); favicon.rel = 'icon'; favicon.type = 'image/svg+xml'; favicon.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232dd4bf'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E"; document.head.appendChild(favicon); return () => { document.head.removeChild(favicon); }; }, []);
 
-    <script>
-        // --- Tab Switching Logic ---
-        function showTab(tabId, event) {
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => { content.classList.remove('active'); });
-            const tabButtons = document.querySelectorAll('.tab-button');
-            tabButtons.forEach(button => { button.classList.remove('active'); });
-            
-            const currentTabContent = document.getElementById(tabId);
-            if (currentTabContent) {
-                currentTabContent.classList.add('active');
-            }
+  const pageContent = () => {
+    switch (page) {
+      case 'home': return <HomePage navigateTo={navigateTo} />;
+      case 'coherence': return <CardiacCoherence audio={audio} />;
+      case 'carree': return <SquareBreathing audio={audio} />;
+      case '478': return <Technique478 audio={audio} />;
+      case 'afghane': return <AfghanWalk audio={audio} />;
+      default: return <HomePage navigateTo={navigateTo} />;
+    }
+  };
+  const navItems = [{ id: 'coherence', label: 'Cohérence' }, { id: 'carree', label: 'Carrée' }, { id: '478', label: '4-7-8' }, { id: 'afghane', label: 'Marche' }];
+  return (<div className="bg-slate-100 min-h-screen font-sans text-slate-800 flex flex-col"><nav className="bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 z-50"><div className="max-w-6xl mx-auto px-4"><div className="flex justify-between items-center h-16"><div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigateTo('home')}><Icon path="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" className="w-6 h-6 text-teal-500"/><span className="font-bold text-lg hidden sm:block">Santé & Sérénité</span></div><div className="hidden md:flex items-center space-x-1">{[{ id: 'home', label: 'Accueil' }, ...navItems].map(item => (<button key={item.id} onClick={() => navigateTo(item.id)} className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${page === item.id ? 'bg-teal-100 text-teal-700' : 'text-slate-600 hover:bg-slate-200'}`}>{item.label}</button>))}</div><div className="md:hidden"><div className="relative"><button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-md text-slate-600 hover:bg-slate-200"><Icon path="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></button>{isMenuOpen && (<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1"><a onClick={() => navigateTo('home')} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer">Accueil</a><div className="border-t my-1"></div>{navItems.map(item => (<a key={item.id} onClick={() => navigateTo(item.id)} className={`block px-4 py-2 text-sm cursor-pointer ${page === item.id ? 'font-bold text-teal-600' : 'text-slate-700 hover:bg-slate-100'}`}>{item.label}</a>))}</div>)}</div></div></div></div></nav><main className={`flex-grow container mx-auto px-4 py-8 transition-opacity duration-300 ${page === 'fading' ? 'opacity-0' : 'opacity-100'}`}>{pageContent()}</main><footer className="text-center py-4 text-xs text-slate-500"><p>Créé pour Naval Group Toulon. Inspiré par les travaux de F. ESPOSITO et F. GENDRE.</p></footer></div>);
+}
 
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-            } else {
-                const activeButton = Array.from(tabButtons).find(btn => btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`showTab('${tabId}'`));
-                if (activeButton) {
-                    activeButton.classList.add('active');
-                }
-            }
-            stopCoherenceExercise(); stopSquareExercise(); stop_478Exercise(); stopMarcheAfghaneExercise();
-        }
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+  .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
 
-        // --- Common Audio Context Initialization ---
-        let audioContextReady = false; // Drapeau global pour l'état de l'audio context
-        let globalSynthForMarche;
-        let globalSoundEnabled = true; // État global du son (pour tous les exercices)
+  /* New CSS Animations for Square Breathing */
+  @keyframes inspire {
+    from { top: 0; left: 0; }
+    to { top: 0; left: calc(100% - 1.5rem); } /* 1.5rem is w-6 */
+  }
+  .animate-inspire {
+    top: 0; left: 0;
+    animation: inspire 4s linear forwards;
+  }
+  
+  @keyframes hold1 {
+    from { top: 0; left: calc(100% - 1.5rem); }
+    to { top: calc(100% - 1.5rem); left: calc(100% - 1.5rem); }
+  }
+  .animate-hold1 {
+     top: 0; left: calc(100% - 1.5rem);
+     animation: hold1 4s linear forwards;
+  }
+  
+  @keyframes expire {
+    from { top: calc(100% - 1.5rem); left: calc(100% - 1.5rem); }
+    to { top: calc(100% - 1.5rem); left: 0; }
+  }
+  .animate-expire {
+    top: calc(100% - 1.5rem); left: calc(100% - 1.5rem);
+    animation: expire 4s linear forwards;
+  }
 
-        async function initializeAudioContext() {
-            if (typeof Tone === 'undefined') {
-                console.warn("Tone.js n'est pas chargé, les sons ne fonctionneront pas.");
-                return false; // Indique que l'audio n'est pas disponible
-            }
-
-            if (Tone.context.state !== 'running') {
-                try {
-                    await Tone.start();
-                    console.log("AudioContext démarré/redémarré par l'utilisateur.");
-                    audioContextReady = true;
-                } catch (e) {
-                    console.error("Erreur au démarrage/redémarrage de Tone.context:", e);
-                    audioContextReady = false;
-                    return false; 
-                }
-            } else {
-                audioContextReady = true; // Déjà en cours d'exécution
-            }
-
-            if (audioContextReady) {
-                if (!globalSynthForMarche) {
-                    globalSynthForMarche = new Tone.PluckSynth({ attackNoise: 0.5, dampening: 4000, resonance: 0.7, volume: -20 }).toDestination();
-                }
-            }
-            return audioContextReady;
-        }
-        
-        // --- Gestion Globale du Son ---
-        function updateAllMuteButtonsText() {
-            const newText = globalSoundEnabled ? "Son On" : "Son Off";
-            if (coherenceMuteBtn) coherenceMuteBtn.textContent = newText;
-            if (squareMuteBtnEl) squareMuteBtnEl.textContent = newText;
-            if (_478MuteBtn) _478MuteBtn.textContent = newText;
-            // Pas de bouton mute dédié pour Marche Afghane, elle suit le son global.
-        }
-
-        function createMuteListener(buttonElement) {
-            if (buttonElement) {
-                buttonElement.addEventListener('click', async () => {
-                    await initializeAudioContext(); // Assure que Tone est prêt avant de manipuler Destination
-                    if (typeof Tone !== 'undefined' && audioContextReady) {
-                        globalSoundEnabled = !globalSoundEnabled;
-                        Tone.Destination.mute = !globalSoundEnabled;
-                        updateAllMuteButtonsText();
-                        console.log("Son global:", globalSoundEnabled ? "Activé" : "Désactivé");
-                    } else if (typeof Tone === 'undefined') {
-                         globalSoundEnabled = !globalSoundEnabled; // Permet de changer le texte même si ToneJS est absent
-                         updateAllMuteButtonsText();
-                         console.warn("Tentative de (dé)muter sans Tone.js chargé.");
-                    } else {
-                        console.warn("Contexte audio non prêt pour (dé)muter.");
-                    }
-                });
-            }
-        }
-
-        // --- Application de Cohérence Cardiaque ---
-        const coherenceCanvas = document.getElementById('breathingCircleCanvas'); 
-        const coherenceInstructionText = document.getElementById('coherenceInstruction'); 
-        const coherenceTimerText = document.getElementById('coherenceTimer'); 
-        const coherenceStartStopBtn = document.getElementById('startStopCoherence'); 
-        const coherenceMuteBtn = document.getElementById('muteSoundCoherence'); 
-        let isCoherenceRunning = false; 
-        let inhaleSynthC, exhaleSynthC; 
-        let animationIdC; 
-        let timerIntervalC; 
-        let synthsCoherenceInitialized = false;
-        // 'soundEnabledC' n'est plus utilisé pour la lecture, globalSoundEnabled et Tone.Destination.mute gèrent cela
-        let totalDotsC = 30; let dotsRemainingC = totalDotsC;
-
-        function setupCoherenceSounds() {
-            if (typeof Tone !== 'undefined' && audioContextReady && !synthsCoherenceInitialized) {
-                try {
-                    inhaleSynthC = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.5 }, volume: -28 }).toDestination(); 
-                    exhaleSynthC = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.5 }, volume: -28 }).toDestination(); 
-                    synthsCoherenceInitialized = true;
-                    console.log("Synths Cohérence initialisés.");
-                } catch (e) { console.error("Erreur init synths Cohérence:", e); }
-            }
-        }
-        if (coherenceCanvas) {
-            const ctxC = coherenceCanvas.getContext('2d'); const maxRadiusC = coherenceCanvas.height / 2 * 0.85; const minRadiusC = coherenceCanvas.height / 2 * 0.35; let currentRadiusC = minRadiusC; let inhalingC = true; const totalTimeC = 300; let remainingTimeC = totalTimeC; 
-            function drawCoherenceCircle() { ctxC.clearRect(0, 0, coherenceCanvas.width, coherenceCanvas.height); ctxC.beginPath(); ctxC.arc(coherenceCanvas.width / 2, coherenceCanvas.height / 2, currentRadiusC, 0, 2 * Math.PI); ctxC.fillStyle = inhalingC ? '#E50000' : '#CC0000'; ctxC.fill(); const dotsOuterRadius = maxRadiusC + 5; const dotRadius = 4; const angleStep = (2 * Math.PI) / totalDotsC; for (let i = 0; i < dotsRemainingC; i++) { const angle = i * angleStep; const dotX = coherenceCanvas.width / 2 + dotsOuterRadius * Math.cos(angle); const dotY = coherenceCanvas.height / 2 + dotsOuterRadius * Math.sin(angle); ctxC.beginPath(); ctxC.arc(dotX, dotY, dotRadius, 0, 2 * Math.PI); ctxC.fillStyle = '#E50000'; ctxC.fill(); }} 
-            function updateCoherenceTimerDisplay() { const minutes = Math.floor(remainingTimeC / 60); const seconds = remainingTimeC % 60; if(coherenceTimerText) coherenceTimerText.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`; } 
-            let phaseStartTimeC = 0; const phaseDurationC = 5000; 
-            function animateCoherence(timestamp) { if (!isCoherenceRunning) return; if (!phaseStartTimeC) phaseStartTimeC = timestamp; const elapsedTimeInPhase = timestamp - phaseStartTimeC; if (inhalingC) { currentRadiusC = minRadiusC + (maxRadiusC - minRadiusC) * (elapsedTimeInPhase / phaseDurationC); if (elapsedTimeInPhase >= phaseDurationC) { currentRadiusC = maxRadiusC; inhalingC = false; phaseStartTimeC = timestamp; if(coherenceInstructionText) coherenceInstructionText.textContent = "Expire..."; if (globalSoundEnabled && inhaleSynthC && audioContextReady) exhaleSynthC.triggerAttackRelease("D4", "4.8s", Tone.now()); } } else { currentRadiusC = maxRadiusC - (maxRadiusC - minRadiusC) * (elapsedTimeInPhase / phaseDurationC); if (elapsedTimeInPhase >= phaseDurationC) { currentRadiusC = minRadiusC; inhalingC = true; phaseStartTimeC = timestamp; if(coherenceInstructionText) coherenceInstructionText.textContent = "Inspire..."; if (globalSoundEnabled && exhaleSynthC && audioContextReady) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now()); } } currentRadiusC = Math.max(minRadiusC, Math.min(maxRadiusC, currentRadiusC)); drawCoherenceCircle(); animationIdC = requestAnimationFrame(animateCoherence); } 
-            async function startCoherenceExercise() { if (isCoherenceRunning) return; if (!await initializeAudioContext()) { console.warn("Cohérence: Audio non prêt pour démarrer."); if (globalSoundEnabled && typeof Tone !== 'undefined') { coherenceMuteBtn.textContent = "Son Off"; } /* Ne pas démarrer l'exercice si l'audio n'est pas prêt */ return; } setupCoherenceSounds(); isCoherenceRunning = true; coherenceStartStopBtn.textContent = "Arrêter"; coherenceStartStopBtn.classList.remove('btn-control'); coherenceStartStopBtn.classList.add('btn-stop'); remainingTimeC = totalTimeC; dotsRemainingC = totalDotsC; drawCoherenceCircle(); updateCoherenceTimerDisplay(); inhalingC = true; currentRadiusC = minRadiusC; if(coherenceInstructionText) coherenceInstructionText.textContent = "Inspire..."; phaseStartTimeC = performance.now(); if (globalSoundEnabled && inhaleSynthC && audioContextReady) inhaleSynthC.triggerAttackRelease("G4", "4.8s", Tone.now()); if(timerIntervalC) clearInterval(timerIntervalC); timerIntervalC = setInterval(() => { if (!isCoherenceRunning) { clearInterval(timerIntervalC); return; } remainingTimeC--; updateCoherenceTimerDisplay(); if (remainingTimeC % 10 === 0 && remainingTimeC < totalTimeC) { dotsRemainingC--; if (dotsRemainingC < 0) dotsRemainingC = 0; drawCoherenceCircle(); } if (remainingTimeC <= 0) { stopCoherenceExercise(); if(coherenceInstructionText) coherenceInstructionText.textContent = "Terminé !"; dotsRemainingC = 0; drawCoherenceCircle(); } }, 1000); if(animationIdC) cancelAnimationFrame(animationIdC); animationIdC = requestAnimationFrame(animateCoherence); } 
-            window.stopCoherenceExercise = function() { if (!isCoherenceRunning) return; isCoherenceRunning = false; if(coherenceStartStopBtn) {coherenceStartStopBtn.textContent = "Démarrer"; coherenceStartStopBtn.classList.add('btn-control'); coherenceStartStopBtn.classList.remove('btn-stop');} cancelAnimationFrame(animationIdC); clearInterval(timerIntervalC); if(coherenceInstructionText) coherenceInstructionText.textContent = "Prêt ?"; currentRadiusC = minRadiusC; dotsRemainingC = totalDotsC; if(coherenceCanvas) drawCoherenceCircle(); if (inhaleSynthC && audioContextReady) inhaleSynthC.triggerRelease(Tone.now() + 0.1); if (exhaleSynthC && audioContextReady) exhaleSynthC.triggerRelease(Tone.now() + 0.1); }
-            if (coherenceStartStopBtn) coherenceStartStopBtn.addEventListener('click', () => { if (!isCoherenceRunning) startCoherenceExercise(); else stopCoherenceExercise(); });
-            if(coherenceCanvas) { drawCoherenceCircle(); updateCoherenceTimerDisplay(); }
-        }
-
-        // --- Application de Respiration Carrée ---
-        const squareCanvasEl = document.getElementById('squareBreathingCanvas'); const squareInstructionEl = document.getElementById('squareInstruction'); const squarePhaseTimerEl = document.getElementById('squarePhaseTimer'); const squareStartStopBtnEl = document.getElementById('startStopSquare'); const squareMuteBtnEl = document.getElementById('muteSoundSquare'); const squareCycleCounterEl = document.getElementById('squareCycleCounter'); 
-        let isSquareRunning = false; let inhaleSynthSq, exhaleSynthSq; let animationIdSq; let synthsSquareInitialized = false;
-        const canvasSizeSq = 180; const paddingSq = 20; const squareSideSq = canvasSizeSq - (2 * paddingSq); const squareXS = paddingSq; const squareYS = paddingSq; const ballRadiusSq = 8; const _squareMinFontSize = 16; let _squareMaxFontSize; let _squareHoldFontSize; const _squarePulseAmplitude = 0.05; const _squarePulseFrequency = 4; const _squareTransitionDuration = 0.5; let _squareIsTransitioning = false; let _squareTransitionStartTime = 0; let _squarePreviousPhaseText = ""; let _squarePreviousPhaseFontSize; let ballPosSq = { x: squareXS, y: squareYS };
-        
-        function setupSquareSounds() {
-            if (typeof Tone !== 'undefined' && audioContextReady && !synthsSquareInitialized) {
-                try {
-                    inhaleSynthSq = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 0.8 }, volume: -30 }).toDestination(); 
-                    exhaleSynthSq = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 0.8 }, volume: -30 }).toDestination();
-                    synthsSquareInitialized = true;
-                    console.log("Synths Carrée initialisés.");
-                } catch (e) { console.error("Erreur init synths Carrée:", e); }
-            }
-        }
-        if (squareCanvasEl) { const ctxS = squareCanvasEl.getContext('2d'); squareCanvasEl.width = canvasSizeSq; squareCanvasEl.height = canvasSizeSq; const textFitRatioSq = 0.8; ctxS.font = "60px 'Nunito', sans-serif"; const textWidthEstimate = ctxS.measureText("Retiens").width; const estimatedRatio = textWidthEstimate / 60; _squareMaxFontSize = Math.floor((squareSideSq * textFitRatioSq) / estimatedRatio); _squareMaxFontSize = Math.min(_squareMaxFontSize, 60); _squareHoldFontSize = _squareMaxFontSize; _squarePreviousPhaseFontSize = _squareHoldFontSize; let currentPhaseSq = 0; const phaseDurationSq = 4; let timeInPhaseSq = phaseDurationSq; const totalCyclesSq = 10; let currentCycleSq = 0; const phaseTextsSq = ["Prêt ?", "Inspire", "Retiens", "Expire", "Retiens"]; const _squarePhaseDurations = [0, 4, 4, 4, 4]; 
-            function drawSquareAndText(text, fontSize, color = '#E0E0E0', alpha = 1) { ctxS.clearRect(0, 0, canvasSizeSq, canvasSizeSq); ctxS.strokeStyle = '#E50000'; ctxS.lineWidth = 3; ctxS.strokeRect(squareXS, squareYS, squareSideSq, squareSideSq); ctxS.save(); ctxS.globalAlpha = alpha; ctxS.font = `${fontSize}px 'Nunito', sans-serif`; ctxS.textAlign = 'center'; ctxS.textBaseline = 'middle'; ctxS.fillStyle = color; ctxS.fillText(text, canvasSizeSq / 2, canvasSizeSq / 2); ctxS.restore(); ctxS.beginPath(); ctxS.arc(ballPosSq.x, ballPosSq.y, ballRadiusSq, 0, 2 * Math.PI); ctxS.fillStyle = '#E50000'; ctxS.fill(); } 
-            function draw_squareCrossFade(oldText, oldFontSize, newText, newFontSize, alphaOld, alphaNew, color = '#E0E0E0') { ctxS.clearRect(0, 0, canvasSizeSq, canvasSizeSq); ctxS.strokeStyle = '#E50000'; ctxS.lineWidth = 3; ctxS.strokeRect(squareXS, squareYS, squareSideSq, squareSideSq); if (alphaOld > 0) { ctxS.save(); ctxS.globalAlpha = alphaOld; ctxS.font = `${oldFontSize}px 'Nunito', sans-serif`; ctxS.textAlign = 'center'; ctxS.textBaseline = 'middle'; ctxS.fillStyle = color; ctxS.fillText(oldText, canvasSizeSq / 2, canvasSizeSq / 2); ctxS.restore(); } if (alphaNew > 0) { ctxS.save(); ctxS.globalAlpha = alphaNew; ctxS.font = `${newFontSize}px 'Nunito', sans-serif`; ctxS.textAlign = 'center'; ctxS.textBaseline = 'middle'; ctxS.fillStyle = color; ctxS.fillText(newText, canvasSizeSq / 2, canvasSizeSq / 2); ctxS.restore(); } ctxS.beginPath(); ctxS.arc(ballPosSq.x, ballPosSq.y, ballRadiusSq, 0, 2 * Math.PI); ctxS.fillStyle = '#E50000'; ctxS.fill(); } 
-            function updateSquarePhaseTimerDisplay() { if(squarePhaseTimerEl) squarePhaseTimerEl.textContent = `00:0${Math.max(0, Math.ceil(timeInPhaseSq))}`; } function updateSquareCycleCounterDisplay() { if(squareCycleCounterEl) squareCycleCounterEl.textContent = `Cycle : ${currentCycleSq} / ${totalCyclesSq}`; } 
-            let lastTimestampSq = 0; let progressInPhase = 0; 
-            function animateSquare(timestamp) { if (!isSquareRunning) return; if (!lastTimestampSq) lastTimestampSq = timestamp; const deltaTime = (timestamp - lastTimestampSq) / 1000; lastTimestampSq = timestamp; timeInPhaseSq -= deltaTime; progressInPhase = 1 - (timeInPhaseSq / (_squarePhaseDurations[currentPhaseSq] || phaseDurationSq)); progressInPhase = Math.max(0, Math.min(1, progressInPhase)); let currentText = phaseTextsSq[currentPhaseSq]; let currentFontSize; if (currentPhaseSq === 1) { currentFontSize = _squareMinFontSize + (_squareMaxFontSize - _squareMinFontSize) * progressInPhase; } else if (currentPhaseSq === 2) { const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000); currentFontSize = _squareHoldFontSize * pulseScale; } else if (currentPhaseSq === 3) { currentFontSize = _squareMaxFontSize - (_squareMaxFontSize - _squareMinFontSize) * progressInPhase; } else if (currentPhaseSq === 4) { const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000); currentFontSize = _squareMinFontSize * pulseScale; } else { currentFontSize = _squareHoldFontSize;} currentFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, currentFontSize || _squareMinFontSize)); switch (currentPhaseSq) { case 1: ballPosSq.x = squareXS + squareSideSq * progressInPhase; ballPosSq.y = squareYS; break; case 2: ballPosSq.x = squareXS + squareSideSq; ballPosSq.y = squareYS + squareSideSq * progressInPhase; break; case 3: ballPosSq.x = squareXS + squareSideSq * (1 - progressInPhase); ballPosSq.y = squareYS + squareSideSq; break; case 4: ballPosSq.x = squareXS; ballPosSq.y = squareYS + squareSideSq * (1 - progressInPhase); break; } ballPosSq.x = Math.max(squareXS, Math.min(squareXS + squareSideSq, ballPosSq.x)); ballPosSq.y = Math.max(squareYS, Math.min(squareYS + squareSideSq, ballPosSq.y)); if (timeInPhaseSq <= 0 && !_squareIsTransitioning) { _squareIsTransitioning = true; _squareTransitionStartTime = timestamp; _squarePreviousPhaseText = currentText; _squarePreviousPhaseFontSize = currentFontSize; currentPhaseSq = (currentPhaseSq + 1) % phaseTextsSq.length; if (currentPhaseSq === 0) { currentCycleSq++; updateSquareCycleCounterDisplay(); if (currentCycleSq >= totalCyclesSq) { stopSquareExercise(); if(squareInstructionEl) squareInstructionEl.textContent = "Terminé !"; return; } currentPhaseSq = 1; } timeInPhaseSq = _squarePhaseDurations[currentPhaseSq]; progressInPhase = 0; if(squareInstructionEl) squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${_squarePhaseDurations[currentPhaseSq]}s)`; if (globalSoundEnabled && audioContextReady) { if (currentPhaseSq === 1 && inhaleSynthSq) { inhaleSynthSq.triggerAttackRelease("C4", `${_squarePhaseDurations[1] - 0.2}s`, Tone.now()); } else if ((currentPhaseSq === 2 || currentPhaseSq === 4) && inhaleSynthSq) { inhaleSynthSq.triggerAttackRelease("G3", `${_squarePhaseDurations[currentPhaseSq] - 0.2}s`, Tone.now()); } else if (currentPhaseSq === 3 && exhaleSynthSq) { exhaleSynthSq.triggerAttackRelease("C3", `${_squarePhaseDurations[3] - 0.2}s`, Tone.now()); } } } if (_squareIsTransitioning) { const transitionElapsedTime = timestamp - _squareTransitionStartTime; const transitionProgress = Math.max(0, Math.min(1, transitionElapsedTime / (_squareTransitionDuration * 1000))); const alphaOld = 1 - transitionProgress; const alphaNew = transitionProgress; let newTextCalculatedFontSize; if (currentPhaseSq === 1) { newTextCalculatedFontSize = _squareMinFontSize + (_squareMaxFontSize - _squareMinFontSize) * progressInPhase; } else if (currentPhaseSq === 2) { const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000); newTextCalculatedFontSize = _squareHoldFontSize * pulseScale; } else if (currentPhaseSq === 3) { newTextCalculatedFontSize = _squareMaxFontSize - (_squareMaxFontSize - _squareMinFontSize) * progressInPhase; } else if (currentPhaseSq === 4) { const pulseScale = 1 + _squarePulseAmplitude * Math.sin(timestamp * Math.PI * _squarePulseFrequency / 1000); newTextCalculatedFontSize = _squareMinFontSize * pulseScale; } else {newTextCalculatedFontSize = _squareHoldFontSize;} newTextCalculatedFontSize = Math.max(_squareMinFontSize, Math.min(_squareMaxFontSize, newTextCalculatedFontSize || _squareMinFontSize)); draw_squareCrossFade(_squarePreviousPhaseText, _squarePreviousPhaseFontSize, phaseTextsSq[currentPhaseSq], newTextCalculatedFontSize, alphaOld, alphaNew); if (transitionProgress >= 1) { _squareIsTransitioning = false; } } else { drawSquareAndText(currentText, currentFontSize); } updateSquarePhaseTimerDisplay(); animationIdSq = requestAnimationFrame(animateSquare); } 
-            async function startSquareExercise() { if (isSquareRunning) return; if (!await initializeAudioContext()) { console.warn("Carrée: Audio non prêt pour démarrer."); if(globalSoundEnabled && typeof Tone !== 'undefined') {squareMuteBtnEl.textContent = "Son Off";} return; } setupSquareSounds(); isSquareRunning = true; squareStartStopBtnEl.textContent = "Arrêter"; squareStartStopBtnEl.classList.remove('btn-control'); squareStartStopBtnEl.classList.add('btn-stop'); currentCycleSq = 1; updateSquareCycleCounterDisplay(); currentPhaseSq = 1; timeInPhaseSq = _squarePhaseDurations[currentPhaseSq]; progressInPhase = 0; _squareIsTransitioning = false; ballPosSq = { x: squareXS, y: squareYS }; if(squareInstructionEl) squareInstructionEl.textContent = `${phaseTextsSq[currentPhaseSq]} (${_squarePhaseDurations[currentPhaseSq]}s)`; if (globalSoundEnabled && inhaleSynthSq && audioContextReady) inhaleSynthSq.triggerAttackRelease("C4", `${_squarePhaseDurations[1] - 0.2}s`, Tone.now()); lastTimestampSq = performance.now(); if(animationIdSq) cancelAnimationFrame(animationIdSq); animationIdSq = requestAnimationFrame(animateSquare); } 
-            window.stopSquareExercise = function() { if (!isSquareRunning) return; isSquareRunning = false; if(squareStartStopBtnEl){squareStartStopBtnEl.textContent = "Démarrer"; squareStartStopBtnEl.classList.add('btn-control'); squareStartStopBtnEl.classList.remove('btn-stop');} cancelAnimationFrame(animationIdSq); if(squareInstructionEl) squareInstructionEl.textContent = "Prêt ? (4s par phase)"; currentPhaseSq = 0; currentCycleSq = 0; updateSquareCycleCounterDisplay(); timeInPhaseSq = _squarePhaseDurations[0] || phaseDurationSq; updateSquarePhaseTimerDisplay(); ballPosSq = { x: squareXS, y: squareYS }; if(squareCanvasEl) drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); if (inhaleSynthSq && audioContextReady) inhaleSynthSq.triggerRelease(Tone.now() + 0.1); if (exhaleSynthSq && audioContextReady) exhaleSynthSq.triggerRelease(Tone.now() + 0.1); _squareIsTransitioning = false; _squareTransitionStartTime = 0; _squarePreviousPhaseText = ""; _squarePreviousPhaseFontSize = _squareHoldFontSize; }
-            if (squareStartStopBtnEl) squareStartStopBtnEl.addEventListener('click', () => { if (!isSquareRunning) startSquareExercise(); else stopSquareExercise(); });
-            if(squareCanvasEl) { drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); updateSquarePhaseTimerDisplay(); updateSquareCycleCounterDisplay(); }
-        }
-
-        // --- Application de Respiration 4-7-8 ---
-        const _478Canvas = document.getElementById('_478BreathingCanvas'); const _478InstructionEl = document.getElementById('_478Instruction'); const _478PhaseTimerEl = document.getElementById('_478PhaseTimer'); const _478CycleCounterEl = document.getElementById('_478CycleCounter'); const _478StartStopBtn = document.getElementById('startStop_478'); const _478MuteBtn = document.getElementById('muteSound_478'); 
-        let is_478Running = false; let _478InhaleSynth, _478HoldSynth, _478ExhaleSynth; let _478AnimationId; let synths478Initialized = false;
-        if (_478Canvas) { const ctx_478 = _478Canvas.getContext('2d'); const canvasWidth_478 = _478Canvas.width; const canvasHeight_478 = _478Canvas.height; const _478MinFontSize = 16; const _478MaxFontSize = 60; const _478HoldFontSize = _478MaxFontSize; const _478PulseAmplitude = 0.05; const _478PulseFrequency = 4; const _478TransitionDuration = 1.0; let _478CurrentPhase = 0; const _478PhaseDurations = [0, 4, 7, 8]; let _478TimeInPhase = _478PhaseDurations[1]; const _478TotalCycles = 20; let _478CurrentCycle = 0; const _478PhaseTexts = ["Prêt ?", "Inspire", "Retiens", "Expire"]; let _478IsTransitioning = false; let _478TransitionStartTime = 0; let _478PreviousPhaseText = ""; let _478PreviousPhaseFontSize = _478HoldFontSize; 
-            function setup_478Sounds() {
-                if (typeof Tone !== 'undefined' && audioContextReady && !synths478Initialized) {
-                    try {
-                        _478InhaleSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.1, sustain: 0.5, release: 0.5 }, volume: -25 }).toDestination(); 
-                        _478HoldSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.1, decay: 0.1, sustain: 0.8, release: 0.1 }, volume: -30 }).toDestination(); 
-                        _478ExhaleSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.1, release: 0.5 }, volume: -25 }).toDestination();
-                        synths478Initialized = true;
-                        console.log("Synths 4-7-8 initialisés.");
-                    } catch (e) { console.error("Erreur init synths 4-7-8:", e); }
-                }
-            }
-            function draw_478Text(text, fontSize, color = '#E0E0E0', alpha = 1) { ctx_478.clearRect(0, 0, canvasWidth_478, canvasHeight_478); ctx_478.save(); ctx_478.globalAlpha = alpha; ctx_478.font = `${fontSize}px 'Nunito', sans-serif`; ctx_478.textAlign = 'center'; ctx_478.textBaseline = 'middle'; ctx_478.fillStyle = color; ctx_478.fillText(text, canvasWidth_478 / 2, canvasHeight_478 / 2); ctx_478.restore(); } 
-            function draw_478CrossFade(oldText, oldFontSize, newText, newFontSize, alphaOld, alphaNew, color = '#E0E0E0') { ctx_478.clearRect(0, 0, canvasWidth_478, canvasHeight_478); if (alphaOld > 0) { ctx_478.save(); ctx_478.globalAlpha = alphaOld; ctx_478.font = `${oldFontSize}px 'Nunito', sans-serif`; ctx_478.textAlign = 'center'; ctx_478.textBaseline = 'middle'; ctx_478.fillStyle = color; ctx_478.fillText(oldText, canvasWidth_478 / 2, canvasHeight_478 / 2); ctx_478.restore(); } if (alphaNew > 0) { ctx_478.save(); ctx_478.globalAlpha = alphaNew; ctx_478.font = `${newFontSize}px 'Nunito', sans-serif`; ctx_478.textAlign = 'center'; ctx_478.textBaseline = 'middle'; ctx_478.fillStyle = color; ctx_478.fillText(newText, canvasWidth_478 / 2, canvasHeight_478 / 2); ctx_478.restore(); } } 
-            function update_478PhaseTimerDisplay() { if(_478PhaseTimerEl) _478PhaseTimerEl.textContent = `00:${String(Math.max(0, Math.ceil(_478TimeInPhase))).padStart(2, '0')}`; } function update_478CycleCounterDisplay() { if(_478CycleCounterEl) _478CycleCounterEl.textContent = `Cycle : ${_478CurrentCycle} / ${_478TotalCycles}`; } 
-            let _478LastTimestamp = 0; let _478ProgressInPhase = 0; 
-            function animate_478(timestamp) { if (!is_478Running) return; if (!_478LastTimestamp) _478LastTimestamp = timestamp; const deltaTime = (timestamp - _478LastTimestamp) / 1000; _478LastTimestamp = timestamp; _478TimeInPhase -= deltaTime; _478ProgressInPhase = 1 - (_478TimeInPhase / (_478PhaseDurations[_478CurrentPhase] || _478PhaseDurations[1])); _478ProgressInPhase = Math.max(0, Math.min(1, _478ProgressInPhase)); let currentText = _478PhaseTexts[_478CurrentPhase]; let currentFontSize = _478HoldFontSize; if (_478CurrentPhase === 1) { currentFontSize = _478MinFontSize + (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase; } else if (_478CurrentPhase === 2) { const pulseScale = 1 + _478PulseAmplitude * Math.sin(timestamp * Math.PI * _478PulseFrequency / 1000); currentFontSize = _478HoldFontSize * pulseScale; } else if (_478CurrentPhase === 3) { currentFontSize = _478MaxFontSize - (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase;} else {currentFontSize = _478HoldFontSize;} currentFontSize = Math.max(_478MinFontSize, Math.min(_478MaxFontSize, currentFontSize || _478MinFontSize)); if (_478TimeInPhase <= 0 && !_478IsTransitioning) { _478IsTransitioning = true; _478TransitionStartTime = timestamp; _478PreviousPhaseText = currentText; _478PreviousPhaseFontSize = currentFontSize; _478CurrentPhase = (_478CurrentPhase + 1) % _478PhaseTexts.length; if (_478CurrentPhase === 0) { _478CurrentCycle++; update_478CycleCounterDisplay(); if (_478CurrentCycle >= _478TotalCycles) { stop_478Exercise(); if(_478InstructionEl) _478InstructionEl.textContent = "Terminé !"; return; } _478CurrentPhase = 1; } _478TimeInPhase = _478PhaseDurations[_478CurrentPhase]; _478ProgressInPhase = 0; if(_478InstructionEl) _478InstructionEl.textContent = `${_478PhaseTexts[_478CurrentPhase]} (${_478PhaseDurations[_478CurrentPhase]}s)`; if (globalSoundEnabled && audioContextReady) { if (_478CurrentPhase === 1 && _478InhaleSynth) { _478InhaleSynth.triggerAttackRelease("C4", `${_478PhaseDurations[1] - 0.2}s`, Tone.now()); } else if (_478CurrentPhase === 2 && _478HoldSynth) { _478HoldSynth.triggerAttackRelease("G3", `${_478PhaseDurations[2] - 0.2}s`, Tone.now()); } else if (_478CurrentPhase === 3 && _478ExhaleSynth) { _478ExhaleSynth.triggerAttackRelease("C3", `${_478PhaseDurations[3] - 0.2}s`, Tone.now()); } } } if (_478IsTransitioning) { const transitionElapsedTime = timestamp - _478TransitionStartTime; const transitionProgress = Math.max(0, Math.min(1, transitionElapsedTime / (_478TransitionDuration * 1000))); const alphaOld = 1 - transitionProgress; const alphaNew = transitionProgress; let newTextCalculatedFontSize = _478HoldFontSize; if (_478CurrentPhase === 1) { newTextCalculatedFontSize = _478MinFontSize + (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase; } else if (_478CurrentPhase === 2) { const pulseScale = 1 + _478PulseAmplitude * Math.sin(timestamp * Math.PI * _478PulseFrequency / 1000); newTextCalculatedFontSize = _478HoldFontSize * pulseScale; } else if (_478CurrentPhase === 3) { newTextCalculatedFontSize = _478MaxFontSize - (_478MaxFontSize - _478MinFontSize) * _478ProgressInPhase; } else {newTextCalculatedFontSize = _478HoldFontSize;} newTextCalculatedFontSize = Math.max(_478MinFontSize, Math.min(_478MaxFontSize, newTextCalculatedFontSize || _478MinFontSize)); draw_478CrossFade(_478PreviousPhaseText, _478PreviousPhaseFontSize, _478PhaseTexts[_478CurrentPhase], newTextCalculatedFontSize, alphaOld, alphaNew); if (transitionProgress >= 1) { _478IsTransitioning = false; } } else { draw_478Text(currentText, currentFontSize); } update_478PhaseTimerDisplay(); _478AnimationId = requestAnimationFrame(animate_478); } 
-            async function start_478Exercise() { if (is_478Running) return; if (!await initializeAudioContext()) { console.warn("478: Audio non prêt pour démarrer."); if(globalSoundEnabled && typeof Tone !== 'undefined'){_478MuteBtn.textContent = "Son Off";} return;} setup_478Sounds(); is_478Running = true; _478StartStopBtn.textContent = "Arrêter"; _478StartStopBtn.classList.remove('btn-control'); _478StartStopBtn.classList.add('btn-stop'); _478CurrentCycle = 1; update_478CycleCounterDisplay(); _478CurrentPhase = 1; _478TimeInPhase = _478PhaseDurations[_478CurrentPhase]; _478ProgressInPhase = 0; _478IsTransitioning = false; if(_478InstructionEl) _478InstructionEl.textContent = `${_478PhaseTexts[_478CurrentPhase]} (${_478PhaseDurations[_478CurrentPhase]}s)`; update_478PhaseTimerDisplay(); if (globalSoundEnabled && _478InhaleSynth && audioContextReady) _478InhaleSynth.triggerAttackRelease("C4", `${_478PhaseDurations[1] - 0.2}s`, Tone.now()); _478LastTimestamp = performance.now(); if(_478AnimationId) cancelAnimationFrame(_478AnimationId); _478AnimationId = requestAnimationFrame(animate_478); } 
-            window.stop_478Exercise = function() { if (!is_478Running) return; is_478Running = false; if(_478StartStopBtn){_478StartStopBtn.textContent = "Démarrer"; _478StartStopBtn.classList.add('btn-control'); _478StartStopBtn.classList.remove('btn-stop');} cancelAnimationFrame(_478AnimationId); if(_478InstructionEl) _478InstructionEl.textContent = "Prêt ?"; _478CurrentPhase = 0; _478CurrentCycle = 0; update_478CycleCounterDisplay(); _478TimeInPhase = _478PhaseDurations[0] || _478PhaseDurations[1]; update_478PhaseTimerDisplay(); if(_478Canvas) draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); if (_478InhaleSynth && audioContextReady) _478InhaleSynth.triggerRelease(Tone.now() + 0.1); if (_478HoldSynth && audioContextReady) _478HoldSynth.triggerRelease(Tone.now() + 0.1); if (_478ExhaleSynth && audioContextReady) _478ExhaleSynth.triggerRelease(Tone.now() + 0.1); _478IsTransitioning = false; _478TransitionStartTime = 0; _478PreviousPhaseText = ""; _478PreviousPhaseFontSize = _478HoldFontSize; }
-            if(_478StartStopBtn) _478StartStopBtn.addEventListener('click', () => { if (!is_478Running) start_478Exercise(); else stop_478Exercise(); });
-            if(_478Canvas) { draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); update_478PhaseTimerDisplay(); update_478CycleCounterDisplay(); }
-        }
-
-        // --- Application de Marche Afghane ---
-        const marchePhaseNameEl = document.getElementById('marche-phase-name'); 
-        const marcheInstructionTextEl = document.getElementById('marche-instruction-text'); 
-        const marcheStepCountEl = document.getElementById('marche-step-count'); 
-        const marcheLungsVisualEl = document.getElementById('marche-lungs-visual'); 
-        const marchePersonFigureEl = document.getElementById('marche-person-figure'); 
-        const marcheStartButton = document.getElementById('marche-start-button'); 
-        const marcheStepIndicatorVisualEl = document.getElementById('marche-step-indicator-visual');
-        const MARCHE_LUNGS_MIN_SIZE = 20; const MARCHE_LUNGS_MAX_SIZE = 35;
-        const marchePhases = [ { name: "Inspire", duration: 3, instruction: "Marche et inspire...", colorClass: "marche-phase-inspire", lungsTargetSize: MARCHE_LUNGS_MAX_SIZE, soundNote: "C4" }, { name: "Retiens (pleins)", duration: 2, instruction: "Marche et retiens l'air...", colorClass: "marche-phase-apnee-pleins", lungsTargetSize: MARCHE_LUNGS_MAX_SIZE, soundNote: "E4" }, { name: "Expire", duration: 3, instruction: "Marche et expire...", colorClass: "marche-phase-expire", lungsTargetSize: MARCHE_LUNGS_MIN_SIZE, soundNote: "G4" }, { name: "Retiens (vides)", duration: 2, instruction: "Marche et bloque (poumons vides)...", colorClass: "marche-phase-apnee-vides", lungsTargetSize: MARCHE_LUNGS_MIN_SIZE, soundNote: "A3" } ];
-        let marcheCurrentPhaseIndex = 0; let marcheCurrentStepInPhase = 0; let marcheAnimationIntervalId = null; let marcheIsAnimating = false; let marcheStepCounterForLegAnimation = 0;
-
-        function updateMarcheLungsVisual(phase, step, duration) { if (!marcheLungsVisualEl) return; let targetSize = MARCHE_LUNGS_MIN_SIZE; marcheLungsVisualEl.className = 'marche-lungs ' + phase.colorClass; if (phase.name === "Inspire") { targetSize = MARCHE_LUNGS_MIN_SIZE + (MARCHE_LUNGS_MAX_SIZE - MARCHE_LUNGS_MIN_SIZE) * (step / duration); } else if (phase.name === "Retiens (pleins)") { targetSize = MARCHE_LUNGS_MAX_SIZE; } else if (phase.name === "Expire") { targetSize = MARCHE_LUNGS_MAX_SIZE - (MARCHE_LUNGS_MAX_SIZE - MARCHE_LUNGS_MIN_SIZE) * (step / duration); } else if (phase.name === "Retiens (vides)") { targetSize = MARCHE_LUNGS_MIN_SIZE; } targetSize = Math.max(MARCHE_LUNGS_MIN_SIZE, Math.min(MARCHE_LUNGS_MAX_SIZE, targetSize)); marcheLungsVisualEl.style.width = `${targetSize}px`; marcheLungsVisualEl.style.height = `${targetSize}px`; }
-        function animateMarcheLegs() { if (!marchePersonFigureEl) return; marcheStepCounterForLegAnimation++; marchePersonFigureEl.classList.remove('marche-walk-left', 'marche-walk-right'); void marchePersonFigureEl.offsetWidth; if (marcheStepCounterForLegAnimation % 2 === 0) { marchePersonFigureEl.classList.add('marche-walk-left'); } else { marchePersonFigureEl.classList.add('marche-walk-right'); } if (marcheStepIndicatorVisualEl) marcheStepIndicatorVisualEl.textContent = `Pas ${marcheCurrentStepInPhase}`; }
-        function marcheNextStep() { if (!marcheIsAnimating) return; const currentPhase = marchePhases[marcheCurrentPhaseIndex]; marcheCurrentStepInPhase++; animateMarcheLegs(); if (globalSoundEnabled && audioContextReady && globalSynthForMarche && typeof Tone !== 'undefined') { globalSynthForMarche.triggerAttackRelease(currentPhase.soundNote, "8n", Tone.now()); } if (marcheCurrentStepInPhase > currentPhase.duration) { marcheCurrentStepInPhase = 1; marcheCurrentPhaseIndex = (marcheCurrentPhaseIndex + 1) % marchePhases.length; const newCurrentPhase = marchePhases[marcheCurrentPhaseIndex]; updateMarcheLungsVisual(newCurrentPhase, marcheCurrentStepInPhase, newCurrentPhase.duration); if (marcheInstructionTextEl) marcheInstructionTextEl.textContent = newCurrentPhase.instruction; if (marcheStepIndicatorVisualEl) marcheStepIndicatorVisualEl.textContent = `Pas ${marcheCurrentStepInPhase}`; } else { updateMarcheLungsVisual(currentPhase, marcheCurrentStepInPhase, currentPhase.duration); } if (marchePhaseNameEl) marchePhaseNameEl.textContent = marchePhases[marcheCurrentPhaseIndex].name; if (marcheInstructionTextEl) marcheInstructionTextEl.textContent = marchePhases[marcheCurrentPhaseIndex].instruction; if (marcheStepCountEl) marcheStepCountEl.textContent = `${marcheCurrentStepInPhase} / ${marchePhases[marcheCurrentPhaseIndex].duration}`; }
-        async function startMarcheAfghaneExercise() { if (marcheIsAnimating || !marcheStartButton) return; if(!await initializeAudioContext()) { console.warn("Marche: Audio non prêt pour démarrer."); return; } marcheIsAnimating = true; marcheStartButton.textContent = "Arrêter"; marcheStartButton.classList.add('marche-active'); marcheCurrentPhaseIndex = 0; marcheCurrentStepInPhase = 0; const initialPhase = marchePhases[marcheCurrentPhaseIndex]; if (marcheInstructionTextEl) marcheInstructionTextEl.textContent = initialPhase.instruction; updateMarcheLungsVisual(initialPhase, 0, initialPhase.duration); if (marcheStepIndicatorVisualEl) marcheStepIndicatorVisualEl.textContent = ""; marcheNextStep(); if (marcheAnimationIntervalId) clearInterval(marcheAnimationIntervalId); marcheAnimationIntervalId = setInterval(marcheNextStep, 1200); }
-        window.stopMarcheAfghaneExercise = function() { if (!marcheIsAnimating || !marcheStartButton) return; clearInterval(marcheAnimationIntervalId); marcheIsAnimating = false; marcheStartButton.textContent = "Démarrer"; marcheStartButton.classList.remove('marche-active'); if (marchePhaseNameEl) marchePhaseNameEl.textContent = "Prêt"; if (marcheInstructionTextEl) marcheInstructionTextEl.textContent = "Clique pour commencer"; if (marcheStepCountEl) marcheStepCountEl.textContent = "--"; if (marcheLungsVisualEl) { marcheLungsVisualEl.style.width = `${MARCHE_LUNGS_MIN_SIZE}px`; marcheLungsVisualEl.style.height = `${MARCHE_LUNGS_MIN_SIZE}px`; marcheLungsVisualEl.className = 'marche-lungs marche-phase-inspire'; } if (marcheStepIndicatorVisualEl) marcheStepIndicatorVisualEl.textContent = ""; if (marchePersonFigureEl) marchePersonFigureEl.classList.remove('marche-walk-left', 'marche-walk-right');}
-        if (marcheStartButton) { marcheStartButton.addEventListener('click', () => { if (marcheIsAnimating) { stopMarcheAfghaneExercise(); } else { startMarcheAfghaneExercise(); } }); }
-        if (marcheLungsVisualEl) { marcheLungsVisualEl.style.width = `${MARCHE_LUNGS_MIN_SIZE}px`; marcheLungsVisualEl.style.height = `${MARCHE_LUNGS_MIN_SIZE}px`; marcheLungsVisualEl.className = 'marche-lungs marche-phase-inspire';}
-        if (marcheInstructionTextEl) marcheInstructionTextEl.textContent = "Clique pour commencer";
-
-        // --- Initialisation Globale ---
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialiser l'état des boutons mute
-            updateAllMuteButtonsText(); 
-            // Ajouter les listeners aux boutons mute
-            createMuteListener(coherenceMuteBtn);
-            createMuteListener(squareMuteBtnEl);
-            createMuteListener(_478MuteBtn);
-
-            showTab('accueil', null); // Passer null pour l'event ici
-            document.body.addEventListener('click', initializeAudioContext, { once: true });
-            document.body.addEventListener('touchstart', initializeAudioContext, { once: true });
-            if (squareCanvasEl) { const ctxS = squareCanvasEl.getContext('2d'); const textFitRatioSq = 0.8; ctxS.font = "60px 'Nunito', sans-serif"; const textWidthEstimate = ctxS.measureText("Retiens").width; const estimatedRatio = textWidthEstimate / 60; _squareMaxFontSize = Math.floor((squareSideSq * textFitRatioSq) / estimatedRatio); _squareMaxFontSize = Math.min(_squareMaxFontSize, 60); _squareHoldFontSize = _squareMaxFontSize; _squarePreviousPhaseFontSize = _squareHoldFontSize; if(squareCanvasEl) drawSquareAndText("Prêt ?", _squareHoldFontSize, '#E0E0E0'); }
-            if (_478Canvas) { if(_478Canvas) draw_478Text("Prêt ?", _478HoldFontSize, '#E0E0E0'); }
-            stopMarcheAfghaneExercise(); 
-        });
-    </script>
-</body>
-</html>
+  @keyframes hold2 {
+    from { top: calc(100% - 1.5rem); left: 0; }
+    to { top: 0; left: 0; }
+  }
+  .animate-hold2 {
+     top: calc(100% - 1.5rem); left: 0;
+     animation: hold2 4s linear forwards;
+  }
+`;
+document.head.appendChild(style);
