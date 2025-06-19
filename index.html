@@ -11,8 +11,30 @@
     <!-- Tone.js for audio -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     
-    <!-- Favicon -->
+    <!-- =============================================================== -->
+    <!-- ==== AJOUTS POUR L'ICÔNE SUR L'ÉCRAN D'ACCUEIL (PWA) ==== -->
+    <!-- =============================================================== -->
+
+    <!-- Thème de la barre d'état du navigateur -->
+    <meta name="theme-color" content="#f1f5f9">
+
+    <!-- Favicon standard -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232dd4bf'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E">
+
+    <!-- Icône pour l'écran d'accueil sur Apple -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232dd4bf'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E">
+    
+    <!-- Métadonnées pour l'expérience "App" sur Apple -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Respiration">
+
+    <!-- Fichier Manifest pour Android (intégré en base64) -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNhbnTDqSAmIFPDqXLDqW5pdMOpIiwKICAic2hvcnRfbmFtZSI6ICJSZXNwaXJhdGlvbiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjFmNWY5IiwKICAidGhlbWVfY29sb3IiOiAiI2ZmZmZmZiIsCiAgImRlc2NyaXB0aW9uIjogIkFwcGxpY2F0aW9uIGRlIHByYXRpcXVlIHJlc3BpcmF0b2lyZS4iLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnJTIweG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyUyMHZpZXdCb3g9JzAgMCAyNCAyNCclMjBmaWxsPSclMjMyZGQ0YmYnJTNFJTNDcGF0aCUyMGQ9J00xMiUyMDIxLjM1bC0xLjQ1LTEuMzJDNS40JTIwMTUuMzYlMjAyJTIwMTIuMjglMjAyJTIwOC41JTIwMiUyMDUuNDIlMjA0LjQyJTIwMyUyMDcuNSUyMDNjMS43NCUyMDAlMjAzLjQxJTIwLjgxJTIwNC41JTIwMi4wOUMxMy4wOSUyMDMuODEyMDE0Ljc2JTIwMyUyMDE2LjUlMjAzYzMuMTYlMjAwJTIwNS41OCUyMDIuNDIlMjA1LjU4JTIwNS41YzAlMjAzLjc4LTMuNCUyMDYuODYtOC41NSUyMDExLjU0TDEyJTIwMjEuMzV6JyUyRiUzRSUzQy9zdmclM0UiLAogICAgICAic2l6ZXMiOiAiMTkyeDE5MiA1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0K">
+    
+    <!-- =============================================================== -->
+    <!-- ======================== FIN DES AJOUTS ======================= -->
+    <!-- =============================================================== -->
     
     <style>
       @keyframes fadeIn { 
@@ -154,48 +176,24 @@
         function renderCoherencePage() {
             appContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4 text-center"><h1 class="text-4xl font-bold text-slate-800 mb-4">Cohérence Cardiaque</h1><div class="relative w-64 h-64 flex items-center justify-center my-4"><div id="circle" class="absolute w-full h-full bg-teal-300 rounded-full transition-transform duration-[5000ms] ease-linear scale-50"></div><div class="relative z-10 text-white font-bold text-3xl"><p id="instruction">Prêt ?</p></div></div><p id="timer" class="text-5xl font-mono text-slate-700 my-4">05:00</p><div class="flex space-x-4"><button id="toggleBtn" class="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition-colors">Démarrer</button><button id="resetBtn" class="px-8 py-3 bg-slate-400 text-white font-semibold rounded-lg shadow-md hover:bg-slate-500 transition-colors">Réinitialiser</button></div><div class="mt-8 text-left max-w-2xl w-full bg-white/80 p-6 rounded-xl shadow-sm"><h2 class="text-2xl font-bold text-slate-700 mb-3">Description</h2><p class="text-slate-600 mb-4">La cohérence cardiaque est une pratique respiratoire qui vise à synchroniser la respiration avec le rythme cardiaque. En respirant à un rythme de 6 cycles par minute (5s d'inspiration, 5s d'expiration), on stimule le nerf vague, ce qui induit un état de calme et de vigilance.</p><h2 class="text-2xl font-bold text-slate-700 mb-3">Les Bienfaits</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Réduction immédiate du stress et de l'anxiété.</li><li>Amélioration de la gestion des émotions.</li><li>Baisse de la tension artérielle.</li></ul><h2 class="text-2xl font-bold text-slate-700 mb-3">Comment Pratiquer</h2><ul class="list-disc list-inside space-y-2 text-slate-600"><li>Asseyez-vous confortablement, le dos droit.</li><li><strong>Inspirez</strong> par le nez pendant 5 secondes.</li><li><strong>Expirez</strong> lentement par la bouche ou le nez pendant 5 secondes.</li><li>Continuez ce cycle pendant 5 minutes.</li></ul></div></div>`;
             const DURATION = 300; let time = DURATION; let isActive = false; const instructionEl = document.getElementById('instruction'), timerEl = document.getElementById('timer'), circleEl = document.getElementById('circle'), toggleBtn = document.getElementById('toggleBtn'), resetBtn = document.getElementById('resetBtn');
-            function update() {
-                if (!isActive) return;
-                time--;
-                timerEl.textContent = `${Math.floor(time/60).toString().padStart(2,'0')}:${(time%60).toString().padStart(2,'0')}`;
-                const cyclePosition = (DURATION - time) % 10;
-                if (cyclePosition === 5) {
-                    instructionEl.textContent = "Expirez...";
-                    circleEl.classList.replace('scale-100','scale-50');
-                    audio?.inspireRelease(); audio?.expireAttack();
-                } else if (cyclePosition === 0) {
-                    instructionEl.textContent = "Inspirez...";
-                    circleEl.classList.replace('scale-50','scale-100');
-                    audio?.expireRelease(); audio?.inspireAttack();
-                }
-                if (time <= 0) {
-                    clearInterval(activeInterval);
-                    isActive=false;
-                    toggleBtn.textContent='Démarrer';
-                    instructionEl.textContent="Terminé !";
-                    audio?.releaseAll();
-                }
-            }
-            toggleBtn.addEventListener('click', e => {
-                setupAudio(); audio.start();
-                isActive = !isActive;
-                e.target.textContent = isActive ? 'Pause' : 'Démarrer';
-                if (isActive) {
+            function update() { if (!isActive) return; time--; timerEl.textContent = `${Math.floor(time/60).toString().padStart(2,'0')}:${(time%60).toString().padStart(2,'0')}`; const p = (DURATION - time) % 10; if (p === 5) { instructionEl.textContent = "Expirez..."; circleEl.classList.replace('scale-100','scale-50'); audio?.inspireRelease(); audio?.expireAttack(); } else if (p === 0) { instructionEl.textContent = "Inspirez..."; circleEl.classList.replace('scale-50','scale-100'); audio?.expireRelease(); audio?.inspireAttack(); } if (time <= 0) { clearInterval(activeInterval); isActive=false; toggleBtn.textContent='Démarrer'; instructionEl.textContent="Terminé !"; audio?.releaseAll(); } }
+            toggleBtn.addEventListener('click', e => { 
+                setupAudio(); audio.start(); 
+                isActive=!isActive; 
+                e.target.textContent = isActive ? 'Pause' : 'Démarrer'; 
+                if (isActive) { 
                     if (time === DURATION) {
                         instructionEl.textContent = "Inspirez...";
                         circleEl.classList.replace('scale-50','scale-100');
                         audio?.inspireAttack();
                     }
-                    activeInterval = setInterval(update, 1000);
-                } else {
-                    clearInterval(activeInterval);
-                    audio?.releaseAll();
-                }
+                    activeInterval = setInterval(update, 1000); 
+                } else { 
+                    clearInterval(activeInterval); 
+                    audio?.releaseAll(); 
+                } 
             });
-            resetBtn.addEventListener('click', () => {
-                cleanup();
-                isActive=false; time=DURATION; timerEl.textContent='05:00'; instructionEl.textContent='Prêt ?'; toggleBtn.textContent='Démarrer'; circleEl.classList.replace('scale-100','scale-50');
-            });
+            resetBtn.addEventListener('click', () => { cleanup(); isActive=false; time=DURATION; timerEl.textContent='05:00'; instructionEl.textContent='Prêt ?'; toggleBtn.textContent='Démarrer'; circleEl.classList.replace('scale-100','scale-50'); });
         }
         
         function renderCarreePage() {
